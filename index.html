@@ -9,10 +9,51 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>window.Swal||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.8/sweetalert2.all.min.js"><\/script>')</script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>window.QRCode||document.write('<script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"><\/script>')</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script>window.firebase||document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"><\/script>')</script>
+<script>window.firebase||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"><\/script>')</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>(window.firebase&&firebase.auth)||document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"><\/script>')</script>
+<script>(window.firebase&&firebase.auth)||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-auth-compat.min.js"><\/script>')</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>(window.firebase&&firebase.firestore)||document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"><\/script>')</script>
+<script>(window.firebase&&firebase.firestore)||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-firestore-compat.min.js"><\/script>')</script>
+<script>
+/* ===== ຖ້າໂຫຼດໄລບຣາຣີບໍ່ໄດ້ (ເນັດຊ້າ/ຖືກບລັອກ): ໃຊ້ໂຕແທນ ເພື່ອໃຫ້ເວັບຍັງເປີດໄດ້ ບໍ່ຄ້າງ ===== */
+(function(){
+  window.__libsMissing = window.__libsMissing || [];
+  if(!window.Swal){
+    window.__libsMissing.push('SweetAlert2');
+    var S = {
+      fire:function(o){
+        o = (typeof o==='string') ? {title:o} : (o||{});
+        if(o.toast){ var d=document.createElement('div'); d.style.cssText='position:fixed;top:12px;right:12px;z-index:100000;background:#04202a;color:#E4ECFB;padding:10px 14px;border-radius:10px;font:14px sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.4)'; d.textContent=o.title||''; document.body.appendChild(d); setTimeout(function(){ d.remove(); },2600); return Promise.resolve({isConfirmed:true}); }
+        var tmp=document.createElement('div'); tmp.innerHTML=(o.html||o.text||''); var msg=(o.title?o.title+'\n':'')+(tmp.textContent||'');
+        if(o.input){ var v=prompt(msg,o.inputValue||''); return Promise.resolve({isConfirmed:v!==null,value:v}); }
+        if(o.showCancelButton){ return Promise.resolve({isConfirmed:confirm(msg)}); }
+        alert(msg); return Promise.resolve({isConfirmed:true});
+      },
+      mixin:function(d){ return { fire:function(o){ return S.fire(Object.assign({}, d, (typeof o==='string')?{title:o}:o)); } }; },
+      close:function(){}, showLoading:function(){}, showValidationMessage:function(m){ alert(m); }
+    };
+    window.Swal = S;
+  }
+  if(!window.QRCode){ window.__libsMissing.push('QRCode'); window.QRCode = { __stub:true, toCanvas:function(){ return Promise.resolve(); } }; }
+  if(!(window.firebase && firebase.auth && firebase.firestore)){
+    window.__libsMissing.push('Firebase'); window.__fbOffline = true;
+    var rej=function(){ return Promise.reject({code:'unavailable',message:'Firebase offline'}); };
+    var noop=function(){};
+    var AUTH={ currentUser:null, onAuthStateChanged:function(cb){ setTimeout(function(){ cb(null); },0); return noop; }, signInAnonymously:rej, signInWithEmailAndPassword:rej, createUserWithEmailAndPassword:rej, signOut:function(){ return Promise.resolve(); } };
+    var DB={ collection:function(){ var c={ doc:function(){ return { get:rej,set:rej,update:rej,delete:rej,onSnapshot:function(){ return noop; } }; }, get:rej, add:rej, where:function(){ return c; }, orderBy:function(){ return c; }, limit:function(){ return c; } }; return c; }, runTransaction:rej, batch:function(){ return { set:noop,update:noop,delete:noop,commit:rej }; } };
+    var AF=function(){ return AUTH; }; AF.EmailAuthProvider={ credential:function(){ return {}; } };
+    var FF=function(){ return DB; }; FF.FieldValue={ increment:function(n){ return n; }, serverTimestamp:function(){ return new Date().toISOString(); }, delete:function(){ return null; } };
+    window.firebase={ initializeApp:noop, auth:AF, firestore:FF };
+  }
+})();
+</script>
 <script>
 window.localAvatar=function(seed){ const s=String(seed||'?'); let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))>>>0;
   const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="hsl('+(h%360)+',55%,38%)"/><text x="32" y="42" font-size="30" text-anchor="middle" fill="#fff" font-family="sans-serif">'+(s[0]||'?').toUpperCase().replace(/[<>&]/g,'')+'</text></svg>';
@@ -147,6 +188,12 @@ button[onclick="toggleTheme()"]{ display:none !important; }
 body .bg-plasma-500, body .bg-ion-500, body [class*="from-plasma-500"]{ color:#04303A !important; }
 body .bg-plasma-500 i, body .bg-ion-500 i, body [class*="from-plasma-500"] i{ color:inherit !important; }
 </style>
+<style>
+/* ===== ກັນໜ້າ STONE ຄ້າງ: CSS ລ້ວນໆ — ເຖິງ JS ຄ້າງກໍຍັງຫາຍເອງຫຼັງ 5 ວິນາທີ ===== */
+html{ background:#041a1d; }
+@keyframes stoneOverlayOut{ to{ opacity:0; visibility:hidden; pointer-events:none; } }
+#loadOverlay{ animation:stoneOverlayOut .4s ease 5s forwards; }
+</style>
 </head>
 <body class="font-body antialiased">
 
@@ -158,8 +205,98 @@ body .bg-plasma-500 i, body .bg-ion-500 i, body [class*="from-plasma-500"] i{ co
 <div id="loadOverlay" class="fixed inset-0 z-[999] bg-ink-950 flex items-center justify-center">
   <div class="text-center">
     <div class="toh-bob font-display font-700 text-5xl tracking-widest text-plasma-500" style="text-shadow:0 0 22px rgba(44,195,210,.55)">STONE</div>
+    <div style="margin-top:16px;font:11px sans-serif;color:rgba(230,247,249,.45)">v2026.10.23-c</div>
   </div>
 </div>
+<script>
+/* ===== ກັນໜ້າໂລໂກຄ້າງ + ບອກສາເຫດ: ເຮັດວຽກເອງ ບໍ່ຂຶ້ນກັບໂຄດຫຼັກ ===== */
+(function(){
+  var errs=[];
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function add(m){ if(errs.length<4 && errs.indexOf(m)<0) errs.push(m); }
+  window.addEventListener('error',function(e){
+    try{
+      var t=e.target;
+      if(t && t!==window && (t.src||t.href)){ if(/cdpn\.io|codepen/i.test(String(t.src||t.href))) return; add('ໂຫຼດບໍ່ໄດ້: '+String(t.src||t.href).replace(/^https?:\/\//,'').split('/').slice(0,2).join('/')); }
+      else add(String(e.message||'error').slice(0,120));
+    }catch(_){}
+  },true);
+  window.__bootErrors=errs;
+  window.addEventListener('unhandledrejection',function(e){ try{ add('promise: '+String((e.reason&&e.reason.message)||e.reason).slice(0,100)); }catch(_){} });
+  function hide(){ var o=document.getElementById('loadOverlay'); if(!o) return; o.style.transition='opacity .4s'; o.style.opacity='0'; setTimeout(function(){ var x=document.getElementById('loadOverlay'); if(x&&x.parentNode) x.parentNode.removeChild(x); },400); }
+  function banner(){
+    if(window.__appReady) return;
+    var b=document.getElementById('bootBanner');
+    if(!b){ b=document.createElement('div'); b.id='bootBanner'; b.style.cssText='position:fixed;left:10px;right:10px;bottom:10px;z-index:100001;background:#04202a;color:#E4ECFB;border:1px solid #2fdbee;border-radius:12px;padding:12px 14px;font:13px/1.5 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.5)'; document.body.appendChild(b); }
+    var miss=window.__libsMissing||[];
+    b.innerHTML='<b>⚠ ໂຫຼດເວັບບໍ່ຄົບ</b> <small style="opacity:.6">v2026.10.23-c</small><br>'+(window.__step?'ຂັ້ນຕອນ: '+esc(window.__step)+'<br>':'')+(miss.length?'ໂຫຼດບໍ່ໄດ້: '+esc(miss.join(', '))+'<br>':'')+(errs.length?errs.map(esc).join('<br>')+'<br>':'ເນັດຊ້າ ຫຼື ຖືກບລັອກ — ກຳລັງລໍຖ້າ...<br>')+'<button onclick="history.go(0)" style="margin-top:8px;padding:6px 14px;border-radius:8px;background:#2fdbee;color:#04303A;font-weight:700;border:0">ລອງໃໝ່</button>';
+  }
+  window.__bootCheck=banner;
+  setTimeout(hide, 4500);
+  setTimeout(banner, 7000);
+  setTimeout(banner, 16000);
+})();
+</script>
+<canvas id="snowCanvas" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9990;"></canvas>
+<script>
+/* ===== ຫິມະຕົກ: ເລີ່ມທັນທີ ແລະ ເຮັດວຽກເອງ ບໍ່ຂຶ້ນກັບໂຄດຫຼັກ ===== */
+(function(){
+  const canvas = document.getElementById('snowCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, dpr = 1, flakes = [], t = 0;
+
+  function makeFlake(randomY){
+    const r = Math.random()*2.6 + 0.8;               // radius
+    return {
+      x: Math.random()*W,
+      y: randomY ? Math.random()*H : -10,
+      r: r,
+      vy: r*0.28 + Math.random()*0.7 + 0.35,          // bigger flakes fall faster
+      sway: Math.random()*1.2 + 0.3,
+      phase: Math.random()*Math.PI*2,
+      alpha: Math.random()*0.45 + 0.45
+    };
+  }
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const target = Math.round(Math.min(W*H/9000, 160)); // scales with screen size
+    while(flakes.length < target) flakes.push(makeFlake(true));
+    if(flakes.length > target) flakes.length = target;
+  }
+
+  function tick(){
+    t += 0.01;
+    ctx.clearRect(0,0,W,H);
+    const wind = Math.sin(t*0.6)*0.35;                 // gentle changing wind
+    for(const f of flakes){
+      f.y += f.vy;
+      f.x += Math.sin(t*2 + f.phase)*f.sway*0.5 + wind;
+      if(f.y > H + 10){ Object.assign(f, makeFlake(false)); }
+      if(f.x > W + 10) f.x = -10; else if(f.x < -10) f.x = W + 10;
+      // soft bluish halo so flakes stay visible on light and dark backgrounds
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r*1.9, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(121,233,244,' + (f.alpha*0.22) + ')';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,' + f.alpha + ')';
+      ctx.fill();
+    }
+    (window.requestAnimationFrame||function(fn){ setTimeout(fn,16); })(tick);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  (window.requestAnimationFrame||function(fn){ setTimeout(fn,16); })(tick);
+})();
+</script>
+
 
 
 
@@ -1240,34 +1377,65 @@ function _hideLoadOverlay(){
   setTimeout(()=>{ const x=document.getElementById('loadOverlay'); if(x) x.remove(); }, 400);
 }
 function _withTimeout(p, ms){ return Promise.race([Promise.resolve(p).catch(e=>{ console.warn(e); }), new Promise(r=>setTimeout(r, ms))]); }
-setTimeout(_hideLoadOverlay, 8000);   // failsafe
+setTimeout(_hideLoadOverlay, 5000);   // failsafe
 
+/* ===== QRCode: ໂຫຼດແບບ async ຈາກຫຼາຍແຫຼ່ງ (document.write ຖືກ Chrome ບລັອກເມື່ອເນັດຊ້າ) ===== */
+(function(){
+  if((window.__libsMissing||[]).indexOf('QRCode')<0) return;
+  var urls=['https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.js','https://unpkg.com/qrcode@1.5.3/build/qrcode.js','https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js'], i=0;
+  (function next(){
+    if(i>=urls.length) return;
+    var s=document.createElement('script'); s.async=true; s.src=urls[i++];
+    s.onload=function(){ if(window.QRCode && window.QRCode.toCanvas && !window.QRCode.__stub){ window.__libsMissing=(window.__libsMissing||[]).filter(function(x){return x!=='QRCode';}); } else next(); };
+    s.onerror=next; document.head.appendChild(s);
+  })();
+})();
 (async function init(){
-  await _withTimeout(waitForAuthReady(), 4000);
-  await _withTimeout(pullAdminDataFromFirestore(), 6000);
-  startLiveSync();
-  await _withTimeout(seedIfNeeded(), 4000);
-  applyTheme(loadDB(DB_KEYS.theme,'dark'));
-  applyBackground();
-  renderHeroBanner();
-  renderSiteBranding();
-  renderMarquee();
-  renderCategories();
-  renderHomeGrids();
-  updateHeroStats();
-  renderAuthArea();
-  route();
-  window.addEventListener('hashchange', route);
-  setTimeout(_hideLoadOverlay, 350);
-  setTimeout(()=>{ if(window.showWelcomePopup) window.showWelcomePopup(); }, 500);
-  if(SESSION && SESSION.role==='user') refreshOwnUserFromFirestore();
-  // Quota saver: refresh every 60s (was 15s) and only while the tab is visible
+  const _safe = f => { try{ f(); }catch(e){ console.warn('boot step failed', e); } };
+  const _step = n => { window.__step = n; };
+  let _painted = false;
+  const _paint = () => {
+    if(_painted) return; _painted = true; _step('paint');
+    _safe(()=>applyTheme(loadDB(DB_KEYS.theme,'dark')));
+    _safe(applyBackground); _safe(renderHeroBanner); _safe(renderSiteBranding); _safe(renderMarquee);
+    _safe(renderCategories); _safe(renderHomeGrids); _safe(updateHeroStats); _safe(renderAuthArea); _safe(route);
+    window.addEventListener('hashchange', route);
+    setTimeout(_hideLoadOverlay, 100);
+    window.__appReady = true; try{ var _bb=document.getElementById('bootBanner'); if(_bb) _bb.remove(); }catch(e){}
+    setTimeout(()=>{ if(window.showWelcomePopup) window.showWelcomePopup(); }, 500);
+  };
+  // ປ້ອງກັນສຸດທ້າຍ: ຖ້າຂັ້ນຕອນໃດຄ້າງ ເກີນ 6 ວິນາທີ ບັງຄັບສະແດງໜ້າເວັບຈາກແຄຊເລີຍ
+  setTimeout(()=>{ if(!_painted){ console.warn('forced paint (init stalled at: '+window.__step+')'); _paint(); } }, 6000);
+  _step('start');
+  const _hadCache = !!localStorage.getItem(DB_KEYS.products);
+  _step('seed');
+  try{ await _withTimeout(seedIfNeeded(), 2500); }catch(e){ console.warn(e); }
+  if(!_hadCache){
+    _step('first-visit auth'); await _withTimeout(waitForAuthReady(), 2000);
+    _step('first-visit pull'); await _withTimeout(pullAdminDataFromFirestore(), 2500);
+  }
+  _paint();
+  // ຊິ້ງ Firebase ທາງຫຼັງ (ບໍ່ບລັອກໜ້າເວັບ) ແລ້ວອັບເດດໜ້າຈໍເມື່ອມີຂໍ້ມູນໃໝ່
+  (async()=>{
+    try{
+      if(_hadCache){
+        _step('bg auth'); await _withTimeout(waitForAuthReady(), 3000);
+        _step('bg pull'); const changed = await _withTimeout(pullAdminDataFromFirestore(), 8000);
+        if(changed) _liveRerender();
+      }
+      _step('live sync'); startLiveSync();
+      if(SESSION && SESSION.role==='user') refreshOwnUserFromFirestore();
+      _step('done');
+    }catch(e){ console.warn('background sync failed', e); }
+  })();
+  // Quota saver: refresh every 60s and only while the tab is visible
   setInterval(()=>{ if(!document.hidden) refreshOwnUserFromFirestore(); }, 60000);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshOwnUserFromFirestore(); });
-})().catch(e=>{ console.error("init failed", e); _hideLoadOverlay(); });
+})().catch(e=>{ console.error("init failed", e); try{ (window.__bootErrors||[]).push(String((e&&e.message)||e).slice(0,120)); }catch(_){} _hideLoadOverlay(); if(window.__bootCheck) window.__bootCheck(); });
 
 function route(){
-  const hash = location.hash.replace('#/', '') || 'home';
+  const _lh = String(location.hash||'');
+  const hash = (_lh.indexOf('#/')===0 ? _lh.slice(2) : _lh) || 'home';
   if(hash.startsWith('product/')){ openProductModalById(hash.split('/')[1]); go('home', true); return; }
   if(hash.startsWith('category/')){ CAT_PAGE_ID = decodeURIComponent(hash.split('/')[1]||''); go('category', true); return; }
   go(hash, true);
@@ -1367,167 +1535,4 @@ function renderSiteBranding(){
   document.querySelectorAll('.site-name-text').forEach(el=>{
     if(customName){ el.textContent = customName; } else { el.innerHTML = 'STONE<span class="text-plasma-400"> SHOP</span>'; }
   });
-  document.querySelectorAll('.site-logo-slot').forEach(el=>{
-    if(settings.siteLogo){ el.innerHTML = `<img src="${settings.siteLogo}" class="w-full h-full object-cover">`; } else { el.innerHTML = '<i class="fa-solid fa-gamepad text-ink-950 text-sm"></i>'; }
-  });
-  applyHomeScreenIcon();
-}
-
-// ===== ໄອຄອນເມື່ອລູກຄ້າ "ເພີ່ມໃສ່ໜ້າຈໍຫຼັກ" (Add to Home Screen) — ໃຊ້ຮູບໂລໂກທີ່ແອັດມິນອັບໂຫຼດ =====
-function _setHeadLink(rel, href, sizes){
-  let l = document.querySelector('link[data-toh-icon="'+rel+(sizes||'')+'"]');
-  if(!l){ l = document.createElement('link'); l.setAttribute('data-toh-icon', rel+(sizes||'')); document.head.appendChild(l); }
-  l.rel = rel; if(sizes) l.setAttribute('sizes', sizes); else l.removeAttribute('sizes');
-  if(rel==='icon') l.type = 'image/png';
-  l.href = href;
-}
-function _setHeadMeta(name, content){
-  let m = document.querySelector('meta[name="'+name+'"]');
-  if(!m){ m = document.createElement('meta'); m.name = name; document.head.appendChild(m); }
-  m.content = content;
-}
-function _makeIconPng(img, size){
-  const c = document.createElement('canvas'); c.width = c.height = size;
-  const g = c.getContext('2d');
-  g.fillStyle = '#051b1e'; g.fillRect(0,0,size,size);       // iOS ບໍ່ຮັບພື້ນໃສ — ຕ້ອງມີພື້ນຕັນ
-  const ratio = img.width / img.height;
-  if(ratio > 0.8 && ratio < 1.25){                          // ຮູບເກືອບສີ່ຫຼ່ຽມ → ເຕັມຊ່ອງເລີຍ ແບບ WM88
-    const side = Math.min(img.width, img.height);
-    g.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, size, size);
-  } else {                                                  // ຮູບຍາວ/ກວ້າງ → ຍ່ອໃຫ້ພໍດີບໍ່ໃຫ້ຖືກຕັດ
-    const k = Math.min(size/img.width, size/img.height);
-    const w = img.width*k, h = img.height*k;
-    g.drawImage(img, (size-w)/2, (size-h)/2, w, h);
-  }
-  return c.toDataURL('image/png');
-}
-let _homeIconSrc = '';
-function applyHomeScreenIcon(){
-  try{
-    const st = loadDB(DB_KEYS.settings, {});
-    const logo = st.siteLogo;
-    const name = (st.siteName||'').trim() || 'STONE SHOP';
-    _setHeadMeta('apple-mobile-web-app-title', name);
-    if(!logo || _homeIconSrc === logo) return;
-    _homeIconSrc = logo;
-    const img = new Image();
-    img.onload = ()=>{
-      try{
-        const p180 = _makeIconPng(img, 180), p192 = _makeIconPng(img, 192), p512 = _makeIconPng(img, 512);
-        _setHeadLink('apple-touch-icon', p180, '180x180');
-        _setHeadLink('icon', p192);
-        const manifest = { name, short_name: name.slice(0,12), start_url: location.href.split('#')[0], display:'standalone',
-          background_color:'#051b1e', theme_color:'#051b1e',
-          icons:[ {src:p192, sizes:'192x192', type:'image/png'}, {src:p512, sizes:'512x512', type:'image/png'} ] };
-        const url = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'}));
-        let ml = document.querySelector('link[rel="manifest"]');
-        if(!ml){ ml = document.createElement('link'); ml.rel = 'manifest'; document.head.appendChild(ml); }
-        ml.href = url;
-      }catch(e){ _setHeadLink('apple-touch-icon', logo); _setHeadLink('icon', logo); }
-    };
-    img.onerror = ()=>{ _setHeadLink('apple-touch-icon', logo); _setHeadLink('icon', logo); };
-    img.src = logo;
-  }catch(e){ console.warn('home screen icon', e); }
-}
-
-function renderMarquee(){
-  const settings = loadDB(DB_KEYS.settings, {qrImage:null, bgImage:null, promoText:'', promoText2:'', marqueeSpeed:22, marqueeSpeed2:22});
-  const bar = document.getElementById('marqueeBar');
-  const track = document.getElementById('marqueeTrack');
-  const text = (settings.promoText||'').trim();
-  const speed = Math.min(120, Math.max(3, parseInt(settings.marqueeSpeed) || 22));
-  // animation-duration set inline (not just via the CSS class) so each bar can
-  // run at its own admin-set speed, always as an "infinite" loop — this keeps
-  // it scrolling continuously for as long as the page stays open (24/7 on a
-  // display screen), never stopping after one pass.
-  track.style.animationDuration = speed + 's';
-  if(!text){ bar.classList.add('hidden'); track.innerHTML=''; }
-  else { bar.classList.remove('hidden'); track.innerHTML = Array(4).fill(`<span>${escapeHtml(text)}</span>`).join(''); }
-  const bar2 = document.getElementById('marqueeBar2');
-  const track2 = document.getElementById('marqueeTrack2');
-  const text2 = (settings.promoText2||'').trim();
-  const speed2 = Math.min(120, Math.max(3, parseInt(settings.marqueeSpeed2) || 22));
-  track2.style.animationDuration = speed2 + 's';
-  if(!text2){ bar2.classList.add('hidden'); track2.innerHTML=''; }
-  else { bar2.classList.remove('hidden'); track2.innerHTML = Array(4).fill(`<span>${escapeHtml(text2)}</span>`).join(''); }
-}
-
-const Toast = Swal.mixin({ toast:true, position:'top-end', showConfirmButton:false, timer:2600, timerProgressBar:true, background:'#072529', color:'#e6f7f9' });
-function toastOk(msg){ Toast.fire({icon:'success', title:msg}); }
-function toastErr(msg){ Toast.fire({icon:'error', title:msg}); }
-function toastInfo(msg){ Toast.fire({icon:'info', title:msg}); }
-
-function renderCategories(){
-  const sec = document.getElementById('categorySec'), el = document.getElementById('categoryGrid');
-  const chip = document.getElementById('catFilterChip');
-  if(!sec || !el) return;
-  const cats = (loadDB(DB_KEYS.settings,{}).categories)||[];
-  sec.classList.toggle('hidden', !cats.length);
-  if(chip){
-    const cur = cats.find(c=>c.id===HOME_FILTER.cat);
-    if(cur){ chip.classList.remove('hidden'); chip.innerHTML = `<div class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-ink-800/80 border border-plasma-500/40 text-sm font-display text-mist-200"><span><i class="fa-solid fa-filter text-plasma-400 mr-2"></i>ໝວດ: <b class="text-mist-100">${escapeHtml(cur.name)}</b></span><button type="button" onclick="filterByCategory('${cur.id}')" class="text-ion-400 hover:underline">ສະແດງທັງໝົດ <i class="fa-solid fa-xmark"></i></button></div>`; }
-    else { chip.classList.add('hidden'); chip.innerHTML=''; }
-  }
-  if(!cats.length) return;
-  const prods = loadDB(DB_KEYS.products, []).filter(p=>p.status!=='hidden');
-  el.innerHTML = cats.map(c=>{
-    const ps = prods.filter(p=>p.category===c.id);
-    const stock = ps.filter(p=>p.status==='available' && !p.maintenance).reduce((n,p)=> n + ((p.stock===undefined||p.stock===null||p.stock==='') ? 1 : (parseInt(p.stock)||0)), 0);
-    const on = HOME_FILTER.cat===c.id;
-    const img = c.image ? `style="background-image:url('${c.image}')"` : '';
-    return `<button type="button" onclick="filterByCategory('${c.id}')" class="text-left w-full rounded-2xl overflow-hidden border ${on?'border-plasma-500 shadow-glow':'border-ink-700'} bg-ink-800/60 hover:border-plasma-500/60 transition">
-      <div class="w-full aspect-[666/230] bg-ink-900 bg-cover bg-center flex items-center justify-center" ${img}>${c.image?'':'<i class="fa-solid fa-layer-group text-4xl text-plasma-500/60"></i>'}</div>
-      <div class="flex items-center justify-between gap-3 p-4 border-t border-ink-700">
-        <div class="min-w-0"><p class="font-display font-700 text-lg text-mist-100 truncate">${escapeHtml(c.name)}</p>
-          <p class="text-sm text-mist-400 mt-0.5">${ps.length} ລາຍການ • ຄົງເຫຼືອ ${fmtK(stock)} ຊິ້ນ</p></div>
-        <span class="shrink-0 w-11 h-11 rounded-full bg-ink-700 border border-ink-600 flex items-center justify-center text-mist-300"><i class="fa-solid fa-arrow-right"></i></span>
-      </div></button>`;
-  }).join('');
-}
-// ກົດໝວດໝູ່ (ເຊັ່ນ ANDROID / IOS) → ເຂົ້າໜ້າສະເພາະຂອງໝວດນັ້ນ ມີປຸ່ມຍ້ອນກັບ (ປຸ່ມຍ້ອນກັບຂອງມືຖືກໍ່ໃຊ້ໄດ້)
-let CAT_PAGE_ID = '';
-function filterByCategory(catId){ window._catFromApp = true; CAT_PAGE_ID = catId; location.hash = '/category/' + encodeURIComponent(catId); }
-function catBack(){
-  window._returnToCat = true;
-  if(window._catFromApp){ window._catFromApp = false; history.back(); } else { go('home'); }
-}
-function renderCategoryPage(){
-  const head = document.getElementById('catPageHead'), grid = document.getElementById('catPageGrid');
-  if(!head || !grid) return;
-  const c = getCategories().find(x=>x.id===CAT_PAGE_ID);
-  if(!c){ head.innerHTML = ''; grid.innerHTML = emptyState('ບໍ່ພົບໝວດໝູ່ນີ້'); return; }
-  const counts = completedOrderCounts();
-  const ps = loadDB(DB_KEYS.products, [])
-    .filter(p=>p.status!=='hidden' && p.category===c.id && p.images && p.images.length)
-    .sort((a,b)=> (counts[b.id]||0)-(counts[a.id]||0) || new Date(b.date)-new Date(a.date));
-  const stock = ps.filter(p=>p.status==='available' && !p.maintenance).reduce((n,p)=> n + ((p.stock===undefined||p.stock===null||p.stock==='') ? 1 : (parseInt(p.stock)||0)), 0);
-  head.innerHTML = (c.image ? `<div class="w-full aspect-[666/230] bg-ink-900 bg-cover bg-center" style="background-image:url('${c.image}')"></div>` : '')
-    + `<div class="p-4"><h2 class="font-display font-700 text-2xl text-mist-100">${escapeHtml(c.name)}</h2><p class="text-sm text-mist-400 mt-1">${ps.length} ລາຍການ • ຄົງເຫຼືອ ${fmtK(stock)} ຊິ້ນ</p></div>`;
-  grid.innerHTML = ps.map(productCard).join('') || emptyState('ຍັງບໍ່ມີສິນຄ້າໃນໝວດນີ້');
-}
-
-function rarityLabel(r){ return {common:'Common',rare:'Rare',epic:'Epic',legendary:'Legendary'}[r]||'Common'; }
-
-function stockBadgeHtml(p){
-  if(p.stock === undefined || p.stock === null || p.stock === '') return '';
-  const stock = parseInt(p.stock) || 0;
-  let cls = '';
-  if(stock <= 0) cls = 'out';
-  else if(stock <= 3) cls = 'low';
-  const label = stock > 0 ? `ເຫຼືອ ${stock} ອັນ` : 'ໝົດສະຕັອກ';
-  return `<span class="stock-badge ${cls}"><i class="fa-solid fa-box"></i> ${label}</span>`;
-}
-
-function productCard(p){
-  const catName = (getCategories().find(c=>c.id===p.category)||{}).name || p.category;
-  const maint = !!p.maintenance;
-  const soldOut = p.status !== 'available' || maint;
-  const stockHtml = maint ? '' : stockBadgeHtml(p);
-  return `
-  <div class="pcard group bg-ink-800/60 border border-ink-700 rounded-xl overflow-hidden hover:-translate-y-1 transition duration-200 clip-corner rarity-${p.rarity} rarity-border cursor-pointer${p.featured?' is-featured':''}" onclick="openProductModalById('${p.id}')">
-    <div class="img-fit aspect-square sm:aspect-[4/3]" style="background-image:url('${p.images[0]}')">
-      <img src="${p.images[0]}" class="fit-main group-hover:scale-105 transition duration-300" loading="lazy">
-      <span class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 rarity-tag rarity-${p.rarity} px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-mono font-600">${rarityLabel(p.rarity)}</span>
-      ${maint? `<span class="absolute inset-0 bg-black/65 flex flex-col items-center justify-center text-center px-2 font-display text-amber-300 text-xs sm:text-base"><i class="fa-solid fa-screwdriver-wrench text-lg sm:text-2xl mb-1"></i>ກຳລັງປັບປຸງ<span class="text-[10px] sm:text-xs text-mist-200 mt-0.5">ຈະມາໃນໄວໆນີ້</span></span>` : soldOut? `<span class="absolute inset-0 bg-black/60 flex items-center justify-center font-display text-red-400 tracking-widest text-xs sm:text-base">ສິ້ນຄ່າມົດແລ້ວ</span>`:''}
-      ${maint?'':discBadge(p)}
-      <button onclick="event.stopPropagation(); toggleFavorite('${p.id}')" class="absolute top-1.5 right-1.5
+  document.querySelecto
