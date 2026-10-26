@@ -189,7 +189,7 @@ body .pcard.is-featured{ background:linear-gradient(180deg,rgba(44,90,210,.28),#
 </style>
 <style>
 /* ===== PXR landing: banner + 4 cards fill the first screen ===== */
-#view-home{ --banner-ratio:3/1; } /* ປັບອັດຕາສ່ວນແບນເນີຢູ່ບ່ອນນີ້ (ເຊັ່ນ 2/1, 16/9) */
+#view-home{ --banner-ratio:3.1/1; } /* ປັບອັດຕາສ່ວນແບນເນີຢູ່ບ່ອນນີ້ (ເຊັ່ນ 2/1, 16/9) */
 #bannerSec .max-w-7xl{ padding-top:20px; }
 .bn-neon{ border-radius:22px; border:2px solid #3b6bff; background:#050b1e; box-shadow:0 0 0 1px rgba(90,140,255,.5), 0 0 28px 2px rgba(59,107,255,.65), inset 0 0 22px rgba(59,107,255,.35); }
 .pxr-card{ position:relative; overflow:hidden; display:flex; align-items:center; gap:14px; padding:20px 16px 22px; min-height:128px; border-radius:22px; background:linear-gradient(160deg,rgba(14,22,56,.95),rgba(5,9,26,.98)); border:1px solid rgba(80,110,220,.35); box-shadow:0 8px 24px -10px rgba(0,0,0,.7); }
@@ -750,7 +750,7 @@ body.pf-on #pxrFab, body.pf-on #pxrFabMenu{ display:none !important; }
 <header class="sticky top-0 z-50 backdrop-blur-xl bg-ink-950/80 border-b border-ink-700/60">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16 gap-2 sm:gap-4">
-      <a href="#" onclick="go('home')" class="flex items-center gap-2 min-w-0">
+      <a role="button" onclick="go('home'); try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){}" class="no-pop flex items-center gap-2 min-w-0" style="cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent">
         <div class="site-logo-slot w-9 h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl bg-gradient-to-br from-[#6893f3] via-[#3f70ef] to-[#234fc7] flex items-center justify-center overflow-hidden shadow-glow"><i class="fa-solid fa-gamepad text-white text-lg"></i></div>
         <span class="site-name-text font-display font-700 text-xl sm:text-2xl tracking-wide text-mist-100 truncate">STONE<span class="text-plasma-400"> SHOP</span></span>
       </a>
@@ -1202,7 +1202,7 @@ body.auth-open #view-home{ display:block !important; }
     <details id="tpFields" class="tp-fields">
       <summary>ຂໍ້ມູນການໂອນ (ຊື່ຜູ້ໂອນ / ເວລາ) — ແກ້ໄຂໄດ້</summary>
       <label class="pf-lab">ຊື່ບັນຊີຜູ້ໂອນ</label>
-      <div class="pf-inp"><i class="fa-regular fa-user"></i><input id="topupSenderName" type="text" autocomplete="off" placeholder="ຕົວຢ່າງ: KEO MANIVONG"></div>
+      <div class="pf-inp"><i class="fa-regular fa-user"></i><input id="topupSenderName" type="text" autocomplete="off" placeholder="ຕົວຢ່າງ: KEO MANIVONG ຫຼື ແກ້ວ ມະນີວົງ (ພິມພາສາລາວໄດ້)"></div>
       <label class="pf-lab">ເວລາໂອນ</label>
       <div class="pf-inp"><i class="fa-regular fa-clock"></i><input id="topupTransferTime" type="time"></div>
       <p id="topupAutoHint" class="hidden tp-note"><i class="fa-solid fa-bolt"></i> ລະບົບກວດສະລິບອັດຕະໂນມັດ ຖ້າຖືກຕ້ອງເງິນຈະເຂົ້າທັນທີ</p>
@@ -1537,7 +1537,7 @@ let _pullInFlight = null, _lastPullAt = 0;
 function pullAdminDataFromFirestore(force){
   if(!BACKEND_ENABLED) return Promise.resolve(false);
   if(_pullInFlight) return _pullInFlight;
-  if(!force && Date.now() - _lastPullAt < 30000) return Promise.resolve(false);   // quota saver: was 4s
+  if(!force && Date.now() - _lastPullAt < 1000) return Promise.resolve(false);   // ດຶງທຸກ 1 ວິນາທີ
   _pullInFlight = (async()=>{
     if(_pendingSyncs.size) await Promise.all([..._pendingSyncs.values()]);
     let changed = false;
@@ -2407,8 +2407,8 @@ function renderCategoryPage(){
   const counts = completedOrderCounts();
   let ps = loadDB(DB_KEYS.products, [])
     .filter(p=>p.status!=='hidden' && p.category===c.id)
-    .sort((a,b)=> (counts[b.id]||0)-(counts[a.id]||0) || new Date(b.date)-new Date(a.date));
-  ps = maintLast(ps);
+    .sort((a,b)=> new Date(b.date)-new Date(a.date));   // ສິນຄ້າໃໝ່ຢູ່ໜ້າສຸດ
+  ps = maintLast(ps);                                  // ສິນຄ້າປັບປຸງ⏱️ ຢູ່ທ້າຍສຸດ (ຕໍ່ຈາກສິນຄ້າທີ່ພ້ອມຂາຍ)
   const stock = ps.filter(p=>p.status==='available' && !p.maintenance).reduce((n,p)=> n + ((p.stock===undefined||p.stock===null||p.stock==='') ? 1 : (parseInt(p.stock)||0)), 0);
   head.innerHTML = (c.image ? `<div class="w-full aspect-[666/230] bg-ink-900 bg-cover bg-center" style="background-image:url('${c.image}')"></div>` : '')
     + `<div class="p-4"><h2 class="font-display font-700 text-2xl text-mist-100">${escapeHtml(c.name)}</h2><p class="text-sm text-mist-400 mt-1">${ps.length} ລາຍການ • ຄົງເຫຼືອ ${fmtK(stock)} ຊິ້ນ</p></div>`;
@@ -2568,6 +2568,7 @@ function _paintHeroStats(userCount){
   }
   renderRecentPurchases();
   renderNewGrid();
+  try{ if(typeof pxrShowRefresh==='function') pxrShowRefresh(); }catch(e){}
 }
 
 function timeAgoLabel(iso){
@@ -4115,9 +4116,20 @@ window.SlipCheck = (function(){
     return String(s||'').toUpperCase()
       .replace(/\b(MR|MRS|MS|MISS|MSTR)\b\.?/g,' ')
       .replace(/ທ້າວ|ນາງ|ທ່ານ|ທ\.|ນ\./g,' ')
+      .replace(/[\u0EC8-\u0ECB]/g,'').replace(/ໜ/g,'ຫນ').replace(/ໝ/g,'ຫມ')   // ຕັດວັນນະຍຸດ ແລະ ລວມຕົວສະກົດໜ/ໝ ເພື່ອປຽບທຽບຊື່ລາວໃຫ້ຖືກຕ້ອງ
       .replace(/[^A-Z0-9\u0E80-\u0EFF]/g,'');
   }
-  function bestSim(needle, hay){
+  // ===== ຊື່ພາສາລາວ: ປຽບທຽບໄດ້ທັງ ລາວ↔ລາວ ແລະ ລາວ↔ອັງກິດ (ຖອດສຽງເປັນໂຄງພະຍັນຊະນະ) =====
+  var LAO_SK = {'ກ':'K','ຂ':'K','ຄ':'K','ງ':'N','ຈ':'S','ສ':'S','ຊ':'S','ດ':'T','ຕ':'T','ຖ':'T','ທ':'T','ນ':'N','ໜ':'N','ບ':'P','ປ':'P','ຜ':'P','ພ':'P','ຝ':'F','ຟ':'F','ມ':'M','ໝ':'M','ຣ':'L','ລ':'L','ວ':'W'};
+  function skelName(s){
+    s = String(s||'').toUpperCase().replace(/[\u0EC8-\u0ECB]/g,'').replace(/ຫ(?=[ງຍນຣລວມ])/g,'');
+    var out = '';
+    for(var i=0;i<s.length;i++){ var c = s.charAt(i); if(LAO_SK[c]) out += LAO_SK[c]; else if(/[A-Z]/.test(c)) out += c; }
+    out = out.replace(/NG/g,'N').replace(/KH/g,'K').replace(/TH/g,'T').replace(/PH/g,'P').replace(/CH|SH/g,'S')
+             .replace(/[GCQ]/g,'K').replace(/D/g,'T').replace(/B/g,'P').replace(/[ZXJ]/g,'S').replace(/R/g,'L').replace(/V/g,'W').replace(/[AEIOUYH]/g,'');
+    return out.replace(/(.)\1+/g,'$1');
+  }
+  function bestSimN(needle, hay){
     needle = normName(needle); hay = normName(hay).slice(0,3000);
     if(needle.length < 2) return 0;
     if(hay.indexOf(needle) >= 0) return 1;
@@ -4129,6 +4141,20 @@ window.SlipCheck = (function(){
       }
     }
     return best;
+  }
+  var LAO_RE = /[\u0E80-\u0EFF]/;
+  // skel=true (ໃຊ້ກັບຊື່ຜູ້ໂອນເທົ່ານັ້ນ): ຖ້າຊື່ ຫຼື ສະລິບ ເປັນພາສາລາວ ແລະປຽບທຽບກົງໆບໍ່ຜ່ານ ໃຫ້ລອງປຽບທຽບແບບຖອດສຽງ
+  function bestSim(needle, hay, skel){
+    var base = bestSimN(needle, hay);
+    if(!skel || base >= 0.72) return base;
+    var nl = LAO_RE.test(String(needle||'')), hl = LAO_RE.test(String(hay||'').slice(0,3000));
+    if(!nl && !hl) return base;
+    var a = skelName(needle); if(a.length < 4) return base;
+    var h = skelName(String(hay||'').slice(0,3000)), L = a.length, best = 0;
+    for(var len=Math.max(3,L-1); len<=L+1; len++){
+      for(var i=0;i+len<=h.length;i++){ var sim = 1 - lev(a, h.substr(i,len)) / Math.max(L,len); if(sim > best) best = sim; }
+    }
+    return Math.max(base, best >= 0.8 ? best*0.92 : 0);
   }
   function parseAmounts(text){
     var out = [], re = /\d[\d,.]*/g, m;
@@ -4266,7 +4292,7 @@ window.SlipCheck = (function(){
     res.info.receiverSim = Math.round(rBest*100);
     if(rBest < 0.8) res.reasons.push('ຊື່ບັນຊີຜູ້ຮັບໃນສະລິບບໍ່ຕົງກັບບັນຊີຮ້ານ');
     // 3) ຊື່ບັນຊີຜູ້ໂອນ (ທີ່ລູກຄ້າປ້ອນ)
-    var sSim = bestSim(ctx.senderName, raw);
+    var sSim = bestSim(ctx.senderName, raw, true);
     res.info.senderSim = Math.round(sSim*100);
     if(sSim < 0.72){
       // ບາງບັນຊີ/ທະນາຄານ ສະລິບບໍ່ສະແດງຊື່ຜູ້ໂອນ → ບໍ່ປະຕິເສດ ຖ້າສະລິບບໍ່ມີຊື່ຜູ້ໂອນໃຫ້ເບິ່ງ
@@ -5318,6 +5344,382 @@ document.addEventListener('click', function(e){ var m=document.getElementById('p
 <style id="pxrNoBell">
 /* ເຊື່ອງກະດິ່ງແຈ້ງເຕືອນ 🔔 ເທິງສຸດ */
 #notifBell,#notifPanel,#notifDot{display:none !important}
+</style>
+<style id="pxr-v2-css">
+/* ===== ບໍ່ສັ່ນ: ປິດ hover-lift/ແອນິເມຊັນຂອງກາດ ແລະປິດ tap highlight ===== */
+html,body{-webkit-tap-highlight-color:transparent}
+.pcard:hover{transform:none!important}
+/* ===== ຄື້ນນ້ຳປ່ຽນໜ້າ (ຄືໃນຄລິບ) — ໃຊ້ transform ລ້ວນໆ ລື່ນໄຫຼ ບໍ່ກະຕຸກ ===== */
+#pxrWave{position:fixed;top:0;bottom:0;left:-90px;width:calc(100vw + 180px);z-index:99999;pointer-events:none;transform:translate3d(-110%,0,0);will-change:transform;display:none}
+#pxrWave.on{display:block;pointer-events:auto}
+#pxrWave .w{position:absolute;left:80px;right:80px;top:0;bottom:0;background:linear-gradient(90deg,#d9dcff 0%,#8f9bff 25%,#4c5cff 55%,#3b49f0 100%);overflow:hidden}
+#pxrWave svg{position:absolute;top:0;height:100%;width:91px}
+#pxrWave svg.r{right:0}#pxrWave svg.l{left:0;transform:scaleX(-1)}
+#pxrWave i{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.9),rgba(255,255,255,.15) 60%,transparent 70%)}
+/* ===== ກາດສິນຄ້າ (ແບບຄລິບ) ===== */
+.pc2{display:flex;flex-direction:column;border-radius:24px;overflow:hidden;background:linear-gradient(180deg,#0d0d13,#060609);border:1px solid rgba(255,255,255,.08);cursor:pointer;touch-action:manipulation;transition:opacity .12s}
+.pc2:active{opacity:.85}
+.pc2-img{position:relative;width:100%;aspect-ratio:1/.92;flex-shrink:0}
+.pc2-ph{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:8px;color:#fff;background:linear-gradient(180deg,#09090d 0%,#1b1b22 50%,#09090d 100%)}
+.pc2-gear{position:relative;width:54px;height:54px;display:flex;align-items:center;justify-content:center;color:#5b7bff;font-size:20px}
+.pc2-gear:before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid rgba(91,123,255,.18);border-top-color:#4a78f0;animation:pc2spin 1.1s linear infinite}
+@keyframes pc2spin{to{transform:rotate(360deg)}}
+.pc2-ph b{font-weight:800;font-size:14px}.pc2-ph small{color:#8a8fa6;font-size:11px}
+.pc2-bar{position:relative;display:block;width:34%;height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:4px}
+.pc2-bar:after{content:"";position:absolute;top:0;bottom:0;width:45%;background:#4a78f0;border-radius:3px;animation:pc2bar 1.4s ease-in-out infinite}
+@keyframes pc2bar{0%{left:-45%}100%{left:100%}}
+.pc2-body{padding:14px 14px 16px}
+.pc2-name{font-weight:800;color:#fff;font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc2-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:8px}
+.pc2-price{color:#fff;font-weight:800;font-size:20px;font-family:'Rajdhani','Noto Sans Lao',sans-serif;white-space:nowrap}.pc2-price b{color:#5b7bff}
+.pc2-stock{color:#8a8fa6;font-size:13px;white-space:nowrap}
+.pc2-btn{margin-top:12px;padding:13px 8px;border-radius:16px;background:#14141b;color:#cfd3e6;font-weight:800;font-size:15px;text-align:center}
+.pc2-btn.on{background:linear-gradient(180deg,#4a78f0,#2c5ad2);color:#fff}
+.pc2-sold{margin-top:12px;text-align:center;color:#5b7bff;font-weight:800;font-size:14px}.pc2-sold i{color:#ff7a2f;margin-right:6px}
+.pc2-sold.zero{color:#9aa0b8}.pc2-sold.zero i{color:#6d7189}
+/* ===== ໜ້າລາຍລະອຽດສິນຄ້າ (ແບບຄລິບທີ 2) ===== */
+#productModal.pdp-on{display:block!important;position:fixed!important;top:0;right:0;bottom:0;left:0;padding:0!important;background:#05060d;backdrop-filter:none;-webkit-backdrop-filter:none;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:150}
+#productModal.pdp-on>div{max-width:680px;width:100%;max-height:none!important;margin:0 auto;border:0!important;border-radius:0!important;background:transparent!important;overflow:visible!important;clip-path:none!important}
+#productModal.pdp-on #productModalBody{padding:0 16px 24px!important}
+.pdp{color:#fff;padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
+.pdp-top{display:flex;align-items:center;gap:10px;padding:8px 0 12px}
+.pdp-back{width:38px;height:38px;border-radius:12px;background:#12121a;border:1px solid rgba(255,255,255,.1);color:#fff;flex-shrink:0}
+.pdp-crumb{font-size:13px;color:#8a8fa6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pdp-crumb b{color:#7a93ff}
+.pdp-hero{border-radius:22px;overflow:hidden;background:#0b0b12;border:1px solid rgba(255,255,255,.08)}
+.pdp-hero img{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain}
+.pdp-thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto}.pdp-thumbs img{width:56px;height:56px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.12);cursor:pointer}
+.pdp h1{font-weight:800;font-size:26px;margin:16px 0 10px;line-height:1.2}
+.pdp-tags{display:flex;gap:8px;flex-wrap:wrap}
+.pdp-tags span{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#12121a;border:1px solid rgba(255,255,255,.08);font-size:12px;color:#cfd3e6}
+.pdp-tags span:before{content:"";width:7px;height:7px;border-radius:50%;background:#e05a5a}.pdp-tags span.g:before{background:#2fd47a}
+.pdp-sec{display:flex;align-items:center;gap:8px;margin:20px 0 4px;font-weight:800;font-size:15px;color:#fff}
+.pdp-sec i{color:#5b7bff}.pdp-sec em{font-style:normal;font-size:11px;padding:1px 7px;border-radius:999px;background:#2c3fd0}
+.pdp .pm-option-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:14px 16px;border-radius:18px;background:#0b0b12;border:1px solid rgba(255,255,255,.08);color:#fff;font-weight:800;margin-top:10px}
+.pdp .pm-option-btn.border-plasma-500{background:linear-gradient(180deg,#3d63f0,#2a49d6);border-color:#4a78f0}
+.pdp .pm-option-btn.out{opacity:.4}
+.pdp .pm-option-btn .dot{width:14px;height:14px;border-radius:50%;background:#000;border:2px solid rgba(255,255,255,.55);flex-shrink:0}
+.pdp .pm-option-btn .nm{flex:1;min-width:0;font-size:14px}.pdp .pm-option-btn .nm small{display:block;margin-top:5px;font-size:11px;color:rgba(255,255,255,.75);font-weight:700}
+.pdp .pm-option-btn .pr{padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.14);font-size:14px;white-space:nowrap}
+.pdp-pl{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#8a8fa6}
+.pdp-price{font-size:30px;font-weight:800;color:#4a78f0;font-family:'Rajdhani','Noto Sans Lao',sans-serif}
+.pdp-qty{display:flex;align-items:center;gap:8px;margin-top:6px}
+.pdp-qty button{width:44px;height:44px;border-radius:12px;background:#12121a;border:1px solid rgba(255,255,255,.1);color:#fff;font-size:20px}.pdp-qty button:disabled{opacity:.3}
+.pdp-qty input{width:64px;height:44px;text-align:center;border-radius:12px;background:#0b0b12;border:1px solid rgba(255,255,255,.1);color:#fff;font-size:18px;-moz-appearance:textfield}
+.pdp-bar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;gap:12px;margin-top:18px;padding:12px;border-radius:20px;background:rgba(10,10,18,.94);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.pdp-bar small{display:block;font-size:11px;color:#8a8fa6}.pdp-bar b{font-size:20px;font-weight:800}
+.pdp-buy{flex:1;padding:15px 10px;border-radius:16px;background:linear-gradient(180deg,#4a78f0,#2c5ad2);color:#fff;font-weight:800;font-size:16px}.pdp-buy:disabled{background:#1a1a22;color:#8a8fa6}
+.pdp-desc{margin-top:8px;padding:16px;border-radius:18px;background:#0b0b12;border:1px solid rgba(255,255,255,.08);color:#cfd3e6;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.pdp-maint{margin-top:16px;padding:16px;border-radius:18px;background:#0b0b12;border:1px solid rgba(255,255,255,.08);text-align:center}
+</style>
+<script id="pxr-v2">
+(function(){
+  /* ---------- ຄື້ນນ້ຳປ່ຽນໜ້າ ---------- */
+  var wave = null, busy = false;
+  function mkWave(){
+    if(wave) return wave;
+    wave = document.createElement('div'); wave.id = 'pxrWave';
+    var path = 'M0 0L0 100 40 100C72 86 8 70 42 54 76 38 10 24 44 8 52 4 48 2 44 0Z';
+    var bub = [[12,8,16],[40,30,10],[22,62,20],[60,78,12],[75,20,14],[50,50,8]].map(function(b){ return '<i style="left:'+b[0]+'%;top:'+b[1]+'%;width:'+b[2]+'px;height:'+b[2]+'px"></i>'; }).join('');
+    wave.innerHTML = '<svg class="l" viewBox="0 0 91 100" preserveAspectRatio="none"><path d="'+path+'" fill="#d9dcff" transform="translate(0,0)"/></svg><div class="w">'+bub+'</div><svg class="r" viewBox="0 0 91 100" preserveAspectRatio="none"><path d="'+path+'" fill="#3b49f0"/></svg>';
+    document.body.appendChild(wave); return wave;
+  }
+  function pxrWave(fn){
+    var reduce = false; try{ reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+    if(busy || reduce || !Element.prototype.animate){ try{ fn(); }catch(e){ console.error(e); } return; }
+    busy = true;
+    var el = mkWave(); el.classList.add('on');
+    setTimeout(function(){ if(busy){ try{ el.getAnimations().forEach(function(x){ x.cancel(); }); }catch(e){} el.classList.remove('on'); busy = false; } }, 1800);   // ກັນຄ້າງ: ປົດລັອກຫຼັງ 1.8 ວິ
+    var ease = 'cubic-bezier(.65,0,.35,1)';
+    el.animate([{transform:'translate3d(-110%,0,0)'},{transform:'translate3d(0,0,0)'}], {duration:300, easing:ease, fill:'forwards'}).finished.then(function(){
+      var root = document.documentElement, old = root.style.scrollBehavior; root.style.scrollBehavior = 'auto';
+      try{ window.scrollTo(0,0); fn(); }catch(e){ console.error(e); }
+      root.style.scrollBehavior = old;
+      setTimeout(function(){
+        el.animate([{transform:'translate3d(0,0,0)'},{transform:'translate3d(110%,0,0)'}], {duration:360, easing:ease, fill:'forwards'}).finished.then(function(){ el.classList.remove('on'); busy = false; });
+      }, 70);
+    }).catch(function(){ busy = false; el.classList.remove('on'); });
+  }
+  window.pxrWave = pxrWave;
+  var _go0 = window.go;
+  window.go = function(view, skip){
+    var cur = document.querySelector('.view.active'), curId = cur ? cur.id.replace('view-','') : '';
+    if(skip || busy || view === curId || view === 'auth' || curId === 'auth') return _go0.apply(this, arguments);
+    var a = arguments, self = this;
+    pxrWave(function(){ _go0.apply(self, a); });
+  };
+  var _fc0 = window.filterByCategory;
+  if(_fc0) window.filterByCategory = function(id){ var self = this; pxrWave(function(){ _fc0.call(self, id); }); };
+  var _cb0 = window.catBack;
+  if(_cb0) window.catBack = function(){ var self = this; pxrWave(function(){ _cb0.call(self); }); };
+
+  /* ---------- ກາດສິນຄ້າ ແບບຄລິບ (ສິນຄ້າປັບປຸງ = ວົງກົມໝຸນ + ແຖບ + ປຸ່ມ "ກຳລັງປັບປຸງ") ---------- */
+  var _cc = {t:0, v:{}};
+  function soldCounts(){ var n = Date.now(); if(n - _cc.t > 800){ try{ _cc.v = completedOrderCounts(); }catch(e){ _cc.v = {}; } _cc.t = n; } return _cc.v; }
+  function stockOf(p){
+    if(p.options && p.options.length && p.options.every(function(o){ return o.pool; })) return p.options.reduce(function(n,o){ return n + ((o.codes||[]).length); }, 0);
+    if(p.stock === undefined || p.stock === null || p.stock === '') return null;
+    return parseInt(p.stock) || 0;
+  }
+  window.productCard = function(p){
+    var img = (p.images && p.images[0]) || '', maint = !!p.maintenance;
+    var price = (p.options && p.options.length) ? Math.min.apply(null, p.options.map(function(o){ return aOpt(p,o); })) : aPrice(p);
+    var stk = stockOf(p), out = (p.status !== 'available') || (stk === 0), sold = soldCounts()[p.id] || 0;
+    var stockTxt = stk === null ? '∞' : stk;
+    var btn = maint ? '<div class="pc2-btn"><i class="fa-solid fa-arrow-up" style="margin-right:8px"></i>ກຳລັງປັບປຸງ</div>'
+            : out ? '<div class="pc2-btn">ໝົດແລ້ວ</div>'
+            : '<div class="pc2-btn on"><i class="fa-solid fa-cart-shopping" style="margin-right:8px"></i>ຊື້ເລີຍ</div>';
+    var imgHtml = (!maint && img) ? '<img src="'+img+'" class="fit-main" loading="lazy">' : '';
+    var ph = (maint || !img) ? '<div class="pc2-ph"><div class="pc2-gear"><i class="fa-solid fa-gear"></i></div><b>ປັບປຸງ / ລໍຖ້າອັບເດດ</b><small>ກຳລັງປັບປຸງ</small><span class="pc2-bar"></span></div>' : '';
+    return '<div class="pc2" onclick="openProductModalById(\''+p.id+'\')">'
+      + '<div class="pc2-img img-fit"'+((!maint && img) ? ' style="background-image:url(\''+img+'\')"' : '')+'>'+imgHtml+ph+'</div>'
+      + '<div class="pc2-body"><p class="pc2-name">'+escapeHtml(p.name)+'</p>'
+      + '<div class="pc2-row"><span class="pc2-price"><b>₭</b> '+fmtDot(price)+'</span><span class="pc2-stock">'+(maint ? 'ຄັງ '+stockTxt : (stk===null ? '' : 'ເຫຼືອ '+stk+' ອັນ'))+'</span></div>'
+      + btn + '<div class="pc2-sold'+(sold?'':' zero')+'"><i class="fa-solid fa-fire"></i>ຂາຍແລ້ວ '+fmtK(sold)+' ອັນ</div></div></div>';
+  };
+
+  /* ---------- ໜ້າລາຍລະອຽດສິນຄ້າ ແບບຄລິບທີ 2 (ບໍ່ມີຫົວໃຈ) ---------- */
+  function renderPDP(p){
+    var cat = (getCategories().find(function(c){ return c.id === p.category; }) || {}).name || p.category || '';
+    var hasOpt = p.options && p.options.length, maint = !!p.maintenance, unavailable = p.status !== 'available' || maint;
+    var first = hasOpt ? (p.options.find(function(o){ return !(o.pool && !(o.codes||[]).length); }) || p.options[0]) : null;
+    var price = hasOpt ? aOpt(p, first) : aPrice(p), base = hasOpt ? aOptBase(p, first) : aPriceBase(p);
+    _currentModalProduct = p; _selectedPmOptionId = hasOpt ? first.id : null; _pmQty = 1;
+    var stk = stockOf(p), imgs = (p.images || []).filter(Boolean);
+    var opts = hasOpt ? p.options.map(function(o){
+      var left = o.pool ? (o.codes||[]).length : null, o_out = o.pool && left <= 0, act = o.id === _selectedPmOptionId;
+      return '<button type="button" '+(o_out?'disabled':'')+' onclick="selectPmOption(\''+o.id+'\')" data-opt-id="'+o.id+'" class="pm-option-btn '+(act?'border-plasma-500 bg-plasma-500/10':'border-ink-600')+(o_out?' out':'')+'">'
+        + '<span class="dot"></span><span class="nm">'+escapeHtml(o.label)+(left!==null ? '<small>'+(o_out?'ໝົດສະຕັອກ':'ເຫຼືອ '+left)+'</small>' : '')+'</span><span class="pr">₭ '+fmtDot(aOpt(p,o))+'</span></button>';
+    }).join('') : '';
+    var qty = unavailable ? '' : '<div class="pdp-pl">ຈຳນວນ</div><div class="pdp-qty"><button type="button" id="pmQtyMinus" onclick="pmQtyChange(-1)" disabled>−</button>'
+      + '<input id="pmQtyInput" type="number" inputmode="numeric" min="1" value="1" onchange="pmQtySet(this.value)"><button type="button" id="pmQtyPlus" onclick="pmQtyChange(1)">+</button><span id="pmQtyMax" style="font-size:11px;color:#8a8fa6;margin-left:6px"></span></div>';
+    var bar = '<div class="pdp-bar"><div><small>ລວມທັງໝົດ</small><b id="pmQtyTotal">₭'+fmtK(price)+'</b></div>'
+      + '<button class="pdp-buy" onclick="buyNow(\''+p.id+'\')" '+(unavailable?'disabled':'')+'>'+(maint ? '<i class="fa-solid fa-arrow-up" style="margin-right:8px"></i>ກຳລັງປັບປຸງ' : (p.status !== 'available' ? 'ຂາຍແລ້ວ' : '<i class="fa-solid fa-cart-shopping" style="margin-right:8px"></i>ຊື້ເລີຍ'))+'</button></div>';
+    document.getElementById('productModalBody').innerHTML =
+      '<div class="pdp"><div class="pdp-top"><button class="pdp-back" onclick="closeProductModal()"><i class="fa-solid fa-chevron-left"></i></button>'
+      + '<div class="pdp-crumb">ໜ້າຫຼັກ / '+escapeHtml(cat)+' / <b>'+escapeHtml(p.name)+'</b></div></div>'
+      + '<div class="pdp-hero">'+(maint || !imgs.length ? '<div class="pc2-ph" style="position:relative;min-height:260px"><div class="pc2-gear"><i class="fa-solid fa-gear"></i></div><b>ປັບປຸງ / ລໍຖ້າອັບເດດ</b><small>ກຳລັງປັບປຸງ</small><span class="pc2-bar"></span></div>' : '<img id="pmMainImg" src="'+imgs[0]+'">')+'</div>'
+      + (imgs.length > 1 && !maint ? '<div class="pdp-thumbs">'+imgs.map(function(i){ return '<img src="'+i+'" onclick="document.getElementById(\'pmMainImg\').src=this.src">'; }).join('')+'</div>' : '')
+      + '<h1>'+escapeHtml(p.name)+'</h1>'
+      + '<div class="pdp-tags"><span>ແນວ: '+escapeHtml(cat)+'</span>'+(stk === null ? '' : '<span class="g">'+(stk > 0 ? 'ມີຄັງພ້ອມ '+stk+' ອັນ' : 'ໝົດສະຕັອກ')+'</span>')+'</div>'
+      + (hasOpt && !maint ? '<div class="pdp-sec"><i class="fa-solid fa-wand-magic-sparkles"></i>ຕົວເລືອກສິນຄ້າ <em>'+p.options.length+'</em></div>'+opts : '')
+      + (maint ? '<div class="pdp-maint"><b>ສິນຄ້ານີ້ກຳລັງປັບປຸງ</b><div style="color:#8a8fa6;font-size:12px;margin-top:4px">ລໍຖ້າອັບເດດ — ກັບມາຊື້ໄດ້ເມື່ອປັບປຸງສຳເລັດ</div></div>' : '<div class="pdp-pl">ລາຄາ</div><div class="pdp-price" id="pmPriceDisplay">'+priceHtml(base, price, false)+'</div>'+qty)
+      + bar
+      + (p.description ? '<div class="pdp-sec"><i class="fa-solid fa-book-open"></i>ລາຍລະອຽດ</div><div class="pdp-desc">'+escapeHtml(p.description)+'</div>' : '')
+      + '</div>';
+    var m = document.getElementById('productModal');
+    m.classList.add('pdp-on'); m.classList.remove('hidden'); m.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+    try{ pmQtyRender(); }catch(e){}
+  }
+  // ສະແດງລວມທັງໝົດແບບຈຸດ (₭ 25.000) ຄືໃນຄລິບ
+  var _pq0 = window.pmQtyRender;
+  window.pmQtyRender = function(){ _pq0.apply(this, arguments); var t = document.getElementById('pmQtyTotal'); if(t && document.querySelector('.pdp')) t.textContent = '₭ ' + fmtDot(pmQtyUnit() * _pmQty); };
+  window.openProductModalById = async function(id){
+    var p = await api.getProduct(id); if(!p) return;
+    pxrWave(function(){ renderPDP(p); });
+  };
+  window.closeProductModal = function(){
+    var m = document.getElementById('productModal'); if(!m || m.classList.contains('hidden')) return;
+    pxrWave(function(){
+      m.classList.add('hidden'); m.classList.remove('pdp-on'); document.body.style.overflow = '';
+      if(location.hash.indexOf('#/product/') === 0) location.hash = '/home';
+    });
+  };
+})();
+</script>
+<style id="pxrRefSize">
+/* ===== ຂະໜາດ/ໄລຍະຫ່າງໜ້າຫຼັກ ໃຫ້ຄືຮູບອ້າງອີງ (ວັດຈາກຮູບ iPhone 414px) — ໃຊ້ສະເພາະມືຖື ===== */
+@media(max-width:767px){
+  /* ຫົວເວັບ: ໂລໂກ້ 70px + ຊື່ເວັບ 26px + ຊິບຜູ້ໃຊ້ນ້ອຍ */
+  body #topStack{ padding:11px 12px 0 !important; }
+  body #topStack header .h-16{ height:78px; gap:4px !important; }
+  body #topStack header > div{ padding-left:5px !important; padding-right:9px !important; }
+  body #topStack header a.flex{ gap:4px !important; }
+  body #topStack header .site-logo-slot{ width:70px !important; height:70px !important; border-radius:16px !important; }
+  body #topStack header .site-name-text{ font-size:26px !important; line-height:1; }
+  body #pxrHdrAvatar.pxr-chip{ height:40px; max-width:128px; padding:0 13px 0 5px; gap:7px; border-radius:18px; font-size:14px; }
+  body #pxrHdrAvatar .av{ width:28px; height:28px; font-size:14px; }
+  /* 4 ປຸ່ມໃຫຍ່ (2×2) */
+  body #pxrActions{ padding:13px 9px 0 !important; }
+  body .pxr-act-frame{ padding:9px 4px 15px; border-radius:26px; }
+  body .pxr-act-frame .grid{ gap:10px 11px; }
+  body .pxr-act{ min-height:98px; padding:10px 11px 20px 8px; border-radius:20px; gap:4px; }
+  body .pxr-act-t{ flex:1; align-items:center; text-align:center; gap:2px; }
+  body .pxr-act-t b{ font-size:18px; line-height:1.2; }
+  body .pxr-act-t i{ font-size:10px; }
+  body .pxr-act-ico{ width:58px; height:58px; border-radius:17px; font-size:26px; }
+  body .pxr-act-wm{ bottom:5px; }
+  /* ແບນເນີ + 4 ກາດສະຖິຕິ */
+  body #bannerSec .max-w-7xl{ padding-left:21px !important; padding-right:21px !important; padding-top:33px; }
+  body #landingStats{ padding:26px 21px 24px !important; }
+  body #landingStats .grid{ gap:14px; }
+  body .pxr-card{ min-height:88px; padding:10px 10px 10px 15px; gap:9px; border-radius:20px; }
+  body .pxr-ico{ width:38px; height:38px; border-radius:12px; font-size:17px; }
+  body .pxr-ico::after{ inset:-7px; }
+  body .pxr-txt{ padding-left:4px; }
+  body .pxr-lbl{ font-size:14px; }
+  body .pxr-num{ font-size:29px; }
+  body .pxr-unit{ font-size:13px; }
+  body .pxr-bg{ font-size:64px; bottom:-10px; }
+  /* ປຸ່ມແຊັດລອຍ */
+  body #pxrFab{ width:56px; height:56px; right:20px; bottom:calc(25px + env(safe-area-inset-bottom,0px)); font-size:23px; }
+}
+</style>
+
+<style id="pxrShowCss">
+/* ===== ກາດສະຖິຕິ: ສະແດງຮູບສິນຄ້າໝູນຢູ່ເບື້ອງຂວາ (ຄືໃນຄລິບ) ===== */
+.pxr-card .pxr-bar{ z-index:2; }
+.pxr-show{ position:absolute; top:0; right:0; bottom:0; width:40%; pointer-events:none; overflow:hidden; z-index:0; }
+.pxr-card.has-show .pxr-bg{ display:none; }
+.pxr-slide{ position:absolute; inset:0; animation:pxrShowIn .7s ease both; }
+.pxr-slide .si{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.6; -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 60%); mask-image:linear-gradient(90deg,transparent 0,#000 60%); }
+.pxr-slide .sf{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(5,9,26,0) 60%,rgba(5,9,26,.55) 100%); }
+.pxr-slide .sn{ position:absolute; left:6px; right:8px; bottom:22px; text-align:right; font:800 9px/1.1 'Rajdhani','Noto Sans Lao',sans-serif; letter-spacing:.04em; text-transform:uppercase; color:rgba(255,255,255,.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pxr-slide .sp{ position:absolute; right:8px; bottom:11px; font:700 8px/1 'Rajdhani','Noto Sans Lao',sans-serif; color:rgba(120,150,255,.85); }
+@keyframes pxrShowIn{ from{ opacity:0; transform:translateX(10px); } to{ opacity:1; transform:none; } }
+</style>
+<script id="pxrShowJs">
+/* ກາດ "ສິນຄ້າ" = ສິນຄ້າທີ່ຍັງເຫຼືອ/ພ້ອມຂາຍ · ກາດ "ຂາຍແລ້ວ" = ສິນຄ້າທີ່ລູກຄ້າຊື້ສຳເລັດ */
+(function(){
+  var KINDS = [
+    { kind:'products', numId:'cardStatProducts', build:buildProducts },
+    { kind:'sold',     numId:'cardStatCompleted', build:buildSold }
+  ];
+  var S = {};
+  function ld(k,d){ try{ return loadDB(k,d); }catch(e){ return d; } }
+  function stockOf(p){
+    if(p.options && p.options.length && p.options.every(function(o){ return o.pool; }))
+      return p.options.reduce(function(n,o){ return n + ((o.codes||[]).length); },0);
+    if(p.stock===undefined || p.stock===null || p.stock==='') return Infinity;
+    return parseInt(p.stock)||0;
+  }
+  function priceOf(p){
+    try{
+      if(p.options && p.options.length) return Math.min.apply(null, p.options.map(function(o){ return aOpt(p,o); }));
+      return aPrice(p);
+    }catch(e){ return Number(p.price)||0; }
+  }
+  function toItem(p, price){ return { id:p.id, name:p.name||'', img:(p.images&&p.images[0])||'', price:price }; }
+  function buildProducts(){
+    return ld(DB_KEYS.products,[])
+      .filter(function(p){ return p.status==='available' && !p.maintenance && stockOf(p)>0; })
+      .map(function(p){ return toItem(p, priceOf(p)); });
+  }
+  function buildSold(){
+    var map = {}; ld(DB_KEYS.products,[]).forEach(function(p){ map[p.id]=p; });
+    var seen = {}, out = [];
+    ld(DB_KEYS.orders,[])
+      .filter(function(o){ return o.status==='completed' && o.productId && map[o.productId]; })
+      .sort(function(a,b){ return new Date(b.createdAt) - new Date(a.createdAt); })
+      .forEach(function(o){
+        if(seen[o.productId]) return; seen[o.productId] = 1;
+        var p = map[o.productId];
+        out.push(toItem(p, Number(o.amount) || priceOf(p)));
+      });
+    return out.slice(0,12);
+  }
+  function mount(numId){
+    var n = document.getElementById(numId); if(!n) return null;
+    var card = n.closest('.pxr-card'); if(!card) return null;
+    var box = card.querySelector('.pxr-show');
+    if(!box){ box = document.createElement('div'); box.className = 'pxr-show'; card.appendChild(box); }
+    return { card:card, box:box };
+  }
+  function paint(st){
+    if(!st.m || !st.items.length) return;
+    var it = st.items[st.i % st.items.length];
+    var sl = document.createElement('div'); sl.className = 'pxr-slide';
+    var mc = document.createElement('div'); mc.className = 'mc';
+    var ph = document.createElement('div'); ph.className = 'mi';
+    if(it.img){ var im = new Image(); im.alt = ''; im.src = it.img; ph.appendChild(im); }
+    mc.appendChild(ph);
+    var n = document.createElement('div'); n.className = 'sn'; n.textContent = it.name; mc.appendChild(n);
+    var p = document.createElement('div'); p.className = 'sp'; p.textContent = '\u20AD ' + fmtDot(it.price); mc.appendChild(p);
+    sl.appendChild(mc);
+    st.m.box.innerHTML = ''; st.m.box.appendChild(sl);
+  }
+  window.pxrShowRefresh = function(){
+    KINDS.forEach(function(k){
+      var st = S[k.kind] || (S[k.kind] = { i:0, items:[], sig:'', m:null });
+      var items = []; try{ items = k.build(); }catch(e){}
+      var m = mount(k.numId); if(!m) return;
+      st.m = m;
+      if(!items.length){ m.box.innerHTML = ''; m.card.classList.remove('has-show'); st.items = []; st.sig = ''; return; }
+      var sig = items.map(function(x){ return [x.id,x.name,x.price,x.img.length].join('|'); }).join('~');
+      st.items = items; m.card.classList.add('has-show');
+      if(sig !== st.sig){ st.sig = sig; st.i = 0; paint(st); }
+    });
+  };
+  setInterval(function(){
+    if(document.hidden) return;
+    KINDS.forEach(function(k){ var st = S[k.kind]; if(st && st.items.length > 1){ st.i++; paint(st); } });
+  }, 2600);
+  setTimeout(function(){ try{ pxrShowRefresh(); }catch(e){} }, 800);
+})();
+</script>
+
+<script id="pxrPoll1s">
+/* ===== ດຶງຂໍ້ມູນຈາກເຊີເວີທຸກ 1 ວິນາທີ (ສິນຄ້າ, ອໍເດີ/ຂາຍແລ້ວ, ຈຳນວນຜູ້ໃຊ້, ການຕັ້ງຄ່າ) ===== */
+(function(){
+  var busy = false;
+  async function tick(){
+    if(busy || document.hidden) return;
+    if(typeof BACKEND_ENABLED === 'undefined' || !BACKEND_ENABLED) return;
+    busy = true;
+    try{
+      var changed = await pullAdminDataFromFirestore();
+      if(changed && typeof _liveRerender === 'function') _liveRerender();
+      if(!(typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'admin')){
+        var c = await readPublicUserCount();
+        var el = document.getElementById('cardStatUsers');
+        if(c !== null && el && el.textContent !== String(c)) el.textContent = c;
+      }
+    }catch(e){}
+    busy = false;
+  }
+  setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) tick(); });
+})();
+</script>
+
+<style id="pxrGapFix">
+/* ແກ້ຊ່ອງວ່າງຫຼາຍເກີນລະຫວ່າງ 4 ປຸ່ມ ກັບແບນເນີ: ກາດຜູ້ໃຊ້ (ທີ່ຊ້ອນຢູ່ໃນຊ່ອງດຽວກັນ) ສູງກວ່າ 4 ປຸ່ມ
+   ເລີຍດັນແບນເນີລົງ. ຕອນປິດຢູ່ ໃຫ້ກາດຜູ້ໃຊ້ບໍ່ກິນພື້ນທີ່ → ຄວາມສູງ = 4 ປຸ່ມພໍດີ ຄືໃນຮູບອ້າງອີງ */
+#pxrStage:not(.open) > #pxrUserWrap{ height:0 !important; min-height:0 !important; overflow:hidden !important; padding-top:0 !important; padding-bottom:0 !important; align-self:start; }
+</style>
+
+<style id="pxrShowCss2">
+/* ===== ຮູບສິນຄ້າໃນກາດ: ໃຫຍ່ຂຶ້ນ + ອ່ຽງ + ມົວນຸ້ມໆ ຄືຮູບອ້າງອີງ ===== */
+.pxr-show{ width:50%; }
+.pxr-slide .mc{ position:absolute; right:-16px; top:-12px; width:112px; height:118px; border-radius:16px; overflow:hidden; transform:rotate(7deg); transform-origin:60% 40%;
+  background:#0d0d14; border:1px solid rgba(130,150,255,.28); filter:blur(1.4px); opacity:.85;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42%); mask-image:linear-gradient(90deg,transparent 0,#000 42%); }
+.pxr-slide .mi{ position:absolute; left:0; right:0; top:0; height:62px; overflow:hidden; background:#111625; }
+.pxr-slide .mi img{ width:100%; height:100%; object-fit:cover; display:block; }
+.pxr-slide .sn{ position:absolute; left:8px; right:14px; top:68px; bottom:auto; text-align:left; font:800 10px/1.1 'Rajdhani','Noto Sans Lao',sans-serif; letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,.88); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pxr-slide .sp{ position:absolute; left:8px; top:84px; right:auto; bottom:auto; font:800 10px/1 'Rajdhani','Noto Sans Lao',sans-serif; color:rgba(120,150,255,.95); }
+.pxr-slide .si,.pxr-slide .sf{ display:none; }
+/* ໄອຄອນໃນກາດ: ອ່ຽງເລັກນ້ອຍ ຄືຮູບອ້າງອີງ (ຕົວໄອຄອນຢູ່ຕັ້ງຢູ່) */
+.pxr-ico{ transform:rotate(-5deg); }
+.pxr-ico > i{ transform:rotate(5deg); }
+</style>
+
+<style id="pxrTapFix">
+/* ກົດໂລໂກ້/ຊື່ເວັບ ແລ້ວຂຶ້ນກອບສີ່ຫຼ່ຽມ = ວົງໂຟກັສຂອງບຣາວເຊີ → ປິດ */
+#topStack a, #topStack button, #pxrActions button, #pxrSideNav button{ outline:none !important; -webkit-tap-highlight-color:transparent; }
+#topStack a:focus, #topStack a:focus-visible{ outline:none !important; box-shadow:none !important; }
+/* ໜ້າສັ່ນ/ຖືກລາກໄປຊ້າຍຂວາ: ມີອົງປະກອບລົ້ນຂອບຂວາ (ເມນູຂ້າງທີ່ຊ່ອນຢູ່) → ຫ້າມເລື່ອນແນວນອນ */
+html{ overflow-x:hidden; }
+body{ overflow-x:clip; max-width:100%; }
+#pxrWave:not(.on){ pointer-events:none !important; visibility:hidden; }
+</style>
+
+<style id="pxrTapFix2">
+/* ກົດໂລໂກ້/ຊື່ເວັບຖີ່ໆ: ກັນຊູມໜ້າ (double-tap), ກັນເລືອກຂໍ້ຄວາມ (ກອບຟ້າ), ກັນກະໂດດ/ຂະຫຍາຍ */
+html, body{ touch-action:manipulation; }
+#topStack, #topStack *{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+#topStack a, #topStack a *{ animation:none !important; }
+#topStack header{ -webkit-transform:translateZ(0); transform:translateZ(0); }
 </style>
 </body>
 </html>
