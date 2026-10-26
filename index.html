@@ -745,7 +745,8 @@ body.pf-on #pxrFab, body.pf-on #pxrFabMenu{ display:none !important; }
 
 
 <div id="topStack" class="sticky top-0 z-50">
-
+<div id="marqueeBar2" class="hidden py-1.5"><div class="marquee-track" id="marqueeTrack2"></div></div>
+<div id="marqueeBar" class="hidden py-1.5"><div class="marquee-track" id="marqueeTrack"></div></div>
 
 <header class="sticky top-0 z-50 backdrop-blur-xl bg-ink-950/80 border-b border-ink-700/60">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2362,10 +2363,10 @@ function applyHomeScreenIcon(){
 }
 
 function renderMarquee(){
-  return;   // ແຖບຂໍ້ຄວາມແລ່ນຖືກລຶບອອກແລ້ວ
   const settings = loadDB(DB_KEYS.settings, {qrImage:null, bgImage:null, promoText:'', promoText2:'', marqueeSpeed:22, marqueeSpeed2:22});
   const bar = document.getElementById('marqueeBar');
   const track = document.getElementById('marqueeTrack');
+  if(!bar || !track) return;
   const text = (settings.promoText||'').trim();
   const speed = Math.min(120, Math.max(3, parseInt(settings.marqueeSpeed) || 22));
   // animation-duration set inline (not just via the CSS class) so each bar can
@@ -2377,6 +2378,7 @@ function renderMarquee(){
   else { bar.classList.remove('hidden'); track.innerHTML = Array(4).fill(`<span>${escapeHtml(text)}</span>`).join(''); }
   const bar2 = document.getElementById('marqueeBar2');
   const track2 = document.getElementById('marqueeTrack2');
+  if(!bar2 || !track2) return;
   const text2 = (settings.promoText2||'').trim();
   const speed2 = Math.min(120, Math.max(3, parseInt(settings.marqueeSpeed2) || 22));
   track2.style.animationDuration = speed2 + 's';
@@ -5359,10 +5361,6 @@ function pxrFabToggle(e){ if(e) e.stopPropagation(); var m = document.getElement
 document.addEventListener('click', function(e){ var m=document.getElementById('pxrFabMenu'); if(m && m.classList.contains('open') && !m.contains(e.target)) pxrFabOpen(false); });
 
 </script>
-<style id="pxrNoMarquee">
-/* ລຶບແຖບຂໍ້ຄວາມແລ່ນດ້ານເທິງ */
-#marqueeBar,#marqueeBar2{display:none !important}
-</style>
 <style id="pxrNoBell">
 /* ເຊື່ອງກະດິ່ງແຈ້ງເຕືອນ 🔔 ເທິງສຸດ */
 #notifBell,#notifPanel,#notifDot{display:none !important}
