@@ -1566,7 +1566,27 @@ function pullAdminDataFromFirestore(force){
 // base64 string. Without this, a phone photo (2-8MB) blows past Firestore's
 // 1MB-per-document limit and the settings doc silently fails to sync to the
 // cloud — it still looks fine locally, but never reaches other devices.
-function compressImageFile(file, maxDim, quality){
+// ===== ບີບອັດຮູບແບບຄົມຊັດ =====
+//  - ຍ່ອຮູບເທື່ອລະເຄິ່ງ (step-down) + imageSmoothingQuality 'high' → ບໍ່ແຕກ/ບໍ່ມົວ ຄືການຍ່ອຄັ້ງດຽວ
+//  - ພື້ນຫຼັງຂາວ (ກັນ PNG ໂປ່ງໃສກາຍເປັນດຳ) · ໃຊ້ WebP ຖ້າບຣາວເຊີຮອງຮັບ (ຄົມກວ່າ JPEG ຂະໜາດເທົ່າກັນ)
+//  - ຖ້າກຳນົດ maxBytes: ຫຼຸດຄຸນນະພາບເທື່ອລະໜ້ອຍກ່ອນ ແລ້ວຄ່ອຍຫຼຸດຂະໜາດ ເພື່ອໃຫ້ພໍດີງົບ ແຕ່ຄົມທີ່ສຸດເທົ່າທີ່ເປັນໄປໄດ້
+const _HQ_WEBP = (function(){ try{ return document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp')===0; }catch(e){ return false; } })();
+function _hqDraw(img, w, h){
+  let cur = img, cw = img.naturalWidth || img.width, ch = img.naturalHeight || img.height;
+  while(cw/2 >= w && ch/2 >= h){
+    const nw = Math.round(cw/2), nh = Math.round(ch/2);
+    const t = document.createElement('canvas'); t.width = nw; t.height = nh;
+    const tg = t.getContext('2d'); tg.imageSmoothingEnabled = true; tg.imageSmoothingQuality = 'high'; tg.drawImage(cur, 0, 0, nw, nh);
+    cur = t; cw = nw; ch = nh;
+  }
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
+  g.drawImage(cur, 0, 0, w, h);
+  return c;
+}
+function _hqEncode(c, q){ return _HQ_WEBP ? c.toDataURL('image/webp', q) : c.toDataURL('image/jpeg', q); }
+function compressImageFile(file, maxDim, quality, maxBytes){
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onerror = ()=>reject(new Error('read failed'));
@@ -1574,15 +1594,18 @@ function compressImageFile(file, maxDim, quality){
       const img = new Image();
       img.onerror = ()=>reject(new Error('image decode failed'));
       img.onload = function(){
-        let w = img.width, h = img.height;
-        if(w > maxDim || h > maxDim){
-          if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
-          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+        let long = Math.min(maxDim, Math.max(sw, sh)), q = quality || 0.85, out;
+        for(let guard = 0; guard < 12; guard++){
+          const k = long / Math.max(sw, sh);
+          const w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
+          out = _hqEncode(_hqDraw(img, w, h), q);
+          if(!maxBytes || Math.floor((out.length - out.indexOf(',') - 1) * 0.75) <= maxBytes) break;
+          if(q > 0.62) q = Math.max(0.62, q - 0.07);          // ຫຼຸດຄຸນນະພາບເທື່ອລະໜ້ອຍ (ບໍ່ໃຫ້ຕ່ຳກວ່າ 0.62)
+          else if(long > 480) long = Math.round(long * 0.88);  // ຍັງໃຫຍ່ເກີນ → ຄ່ອຍຫຼຸດຂະໜາດ
+          else break;
         }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        resolve(out);
       };
       img.src = ev.target.result;
     };
@@ -1783,7 +1806,7 @@ async function agentPanelUpload(input){
   const a = myAgent(); if(!a) return;
   if((a.gallery||[]).length>=12){ input.value=''; return toastErr('ເກັບໄດ້ສູງສຸດ 12 ຮູບ'); }
   try{
-    const img = await compressImageFile(f, 700, 0.55);
+    const img = await compressImageFile(f, 1280, 0.85, 60*1024);   // ງົບ ~60KB/ຮູບ (ເອກະສານ agents ຈຳກັດ 1MB) ແຕ່ຄົມກວ່າເກົ່າ
     const note = (document.getElementById('agpNote').value||'').trim();
     await agentCloudUpdate(a.id, ag=>{ (ag.gallery=ag.gallery||[]).unshift({ id:uid('img'), img, note, at:nowISO() }); });
     toastOk('ສົ່ງຮູບໃຫ້ແອດມິນແລ້ວ'); renderAgentPanel();
@@ -2063,7 +2086,7 @@ function _liveRerender(){
     try{ if(typeof renderProductList==='function') renderProductList(); }catch(e){}
     try{ const ap=document.getElementById('dt-agent'); if(ap && !ap.classList.contains('hidden') && typeof renderAgentPanel==='function') renderAgentPanel(); }catch(e){}
     try{ const cv=document.getElementById('view-category'); if(cv && cv.classList.contains('active')) renderCategoryPage(); }catch(e){}
-    try{ const m=document.getElementById('productModal'); if(m && !m.classList.contains('hidden') && _currentModalProduct){ const id=_currentModalProduct.id; if(loadDB(DB_KEYS.products,[]).some(p=>p.id===id)) openProductModalById(id); else closeProductModal(); } }catch(e){}
+    try{ const m=document.getElementById('productModal'); if(m && !m.classList.contains('hidden') && _currentModalProduct){ const id=_currentModalProduct.id; if(loadDB(DB_KEYS.products,[]).some(p=>p.id===id)){ if(window.pxrRefreshPDP) pxrRefreshPDP(id); } else closeProductModal(); } }catch(e){}
   }, 250);
 }
 function startLiveSync(){
@@ -4759,10 +4782,9 @@ window.SlipCheck = (function(){
     r.onload=function(){
       var im=new Image();
       im.onload=function(){
-        var c=document.createElement('canvas'); c.width=c.height=192;
-        var s=Math.min(im.width,im.height);
-        c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,192,192);
-        var url=c.toDataURL('image/jpeg',.82);
+        var s=Math.min(im.width,im.height), sq=document.createElement('canvas'); sq.width=sq.height=s;
+        sq.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,s,s);
+        var url=_hqDraw(sq,256,256).toDataURL('image/jpeg',.88);   // ຍ່ອແບບຄົມຊັດ 256px (ເຄີຍ 192px ມົວໃນຈໍ retina)
         var u=currentUser(); if(!u) return;
         var users=loadDB(DB_KEYS.users,[]); var i=users.findIndex(function(x){ return x.id===u.id; }); if(i<0) return;
         users[i].avatar=url; saveDB(DB_KEYS.users,users);
@@ -5483,7 +5505,7 @@ html,body{-webkit-tap-highlight-color:transparent}
     var hasOpt = p.options && p.options.length, maint = !!p.maintenance, unavailable = p.status !== 'available' || maint;
     var first = hasOpt ? (p.options.find(function(o){ return !(o.pool && !(o.codes||[]).length); }) || p.options[0]) : null;
     var price = hasOpt ? aOpt(p, first) : aPrice(p), base = hasOpt ? aOptBase(p, first) : aPriceBase(p);
-    _currentModalProduct = p; _selectedPmOptionId = hasOpt ? first.id : null; _pmQty = 1;
+    _currentModalProduct = p; _selectedPmOptionId = hasOpt ? first.id : null; _pmQty = 1; window._pdpSig = pdpSig(p);
     var stk = stockOf(p), imgs = (p.images || []).filter(Boolean);
     var opts = hasOpt ? p.options.map(function(o){
       var left = o.pool ? (o.codes||[]).length : null, o_out = o.pool && left <= 0, act = o.id === _selectedPmOptionId;
@@ -5517,6 +5539,27 @@ html,body{-webkit-tap-highlight-color:transparent}
   window.openProductModalById = async function(id){
     var p = await api.getProduct(id); if(!p) return;
     pxrWave(function(){ renderPDP(p); });
+  };
+  /* ແກ້ບັກ: ເມື່ອຂໍ້ມູນຮ້ານປ່ຽນ (ອໍເດີ/ລັອກ/ສິນຄ້າອື່ນ) ເຄີຍເປີດໜ້າສິນຄ້າໃໝ່ພ້ອມຄື້ນສີຟ້າທຸກໆສອງສາມວິ → ຈໍກະພິບ + ເລື່ອນກັບເທິງສຸດ + ຈຳນວນຖືກຣີເຊັດ.
+     ຕອນນີ້: ວາດໃໝ່ສະເພາະເມື່ອສິນຄ້າຕົວນີ້ປ່ຽນແທ້ ແລະ ວາດແບບງຽບໆ (ບໍ່ມີຄື້ນ) ພ້ອມຮັກສາຕຳແໜ່ງເລື່ອນ / ຕົວເລືອກ / ຈຳນວນ / ຮູບທີ່ເລືອກໄວ້ */
+  function pdpSig(p){
+    try{
+      var pr = (p.options && p.options.length) ? p.options.map(function(o){ return aOpt(p,o); }).join(',') : String(aPrice(p));
+      return JSON.stringify(p) + '|' + pr;
+    }catch(e){ return String(Math.random()); }
+  }
+  window.pxrRefreshPDP = function(id){
+    var m = document.getElementById('productModal'); if(!m || m.classList.contains('hidden')) return;
+    var p = null; try{ p = loadDB(DB_KEYS.products, []).find(function(x){ return x.id === id; }); }catch(e){}
+    if(!p){ closeProductModal(); return; }
+    if(pdpSig(p) === window._pdpSig) return;                    // ສິນຄ້ານີ້ບໍ່ປ່ຽນ → ບໍ່ຕ້ອງວາດໃໝ່ (ບໍ່ກະພິບ)
+    var keepScroll = m.scrollTop, keepOpt = _selectedPmOptionId, keepQty = _pmQty;
+    var mi = document.getElementById('pmMainImg'), keepImg = mi ? mi.getAttribute('src') : null;
+    renderPDP(p);
+    try{ if(keepOpt && p.options && p.options.some(function(o){ return o.id === keepOpt && !(o.pool && !(o.codes||[]).length); })) selectPmOption(keepOpt); }catch(e){}
+    try{ _pmQty = Math.max(1, keepQty || 1); pmQtyRender(); }catch(e){}
+    try{ var ni = document.getElementById('pmMainImg'); if(ni && keepImg && (p.images||[]).indexOf(keepImg) > -1) ni.setAttribute('src', keepImg); }catch(e){}
+    m.scrollTop = keepScroll;
   };
   window.closeProductModal = function(){
     var m = document.getElementById('productModal'); if(!m || m.classList.contains('hidden')) return;
