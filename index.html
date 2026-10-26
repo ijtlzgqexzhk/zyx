@@ -895,6 +895,27 @@ document.querySelectorAll('.site-logo-slot').forEach(function(el){ el.innerHTML=
   #recentBuySec .rb-all{ margin-left:auto; flex:0 0 auto; padding:14px 18px; border-radius:18px; background:#0a0a10; border:1px solid rgba(80,100,255,.35); color:#5b7bff; font-weight:800; font-size:15px; white-space:nowrap; }
   #recentBuySec .rb-track{ display:flex; gap:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:6px 2px 10px; }
   #recentBuySec .rb-track::-webkit-scrollbar{ display:none; }
+
+  /* ===== ລາຍການສັ່ງຊື້ລ່າສຸດ (ເລື່ອນວົນຕະຫຼອດ) ===== */
+  #latestOrdersSec .lo-head h2{ font-family:'Noto Sans Lao','Rajdhani',sans-serif; font-weight:800; font-size:20px; line-height:1.15; color:#fff; }
+  #latestOrdersSec .lo-head p{ font-size:13px; color:#8b90a6; margin-top:2px; }
+  #latestOrdersSec .lo-view{ overflow:hidden; margin-top:12px; padding:4px 0; -webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent); mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent); }
+  #latestOrdersSec .lo-move{ display:flex; gap:12px; width:max-content; animation:loSlide var(--lo-dur,40s) linear infinite; will-change:transform; }
+  #latestOrdersSec .lo-view:active .lo-move, #latestOrdersSec .lo-view:hover .lo-move{ animation-play-state:paused; }
+  @keyframes loSlide{ from{ transform:translateX(0); } to{ transform:translateX(calc(-50% - 6px)); } }
+  #latestOrdersSec .lo-card{ flex:0 0 auto; width:280px; display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:18px; background:linear-gradient(180deg,#0d0d13,#060609); border:1px solid rgba(255,255,255,.08); }
+  #latestOrdersSec .lo-img{ width:56px; height:56px; flex:0 0 auto; border-radius:12px; overflow:hidden; background:#14141b center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:#4d6bff; }
+  #latestOrdersSec .lo-img img{ width:100%; height:100%; object-fit:cover; }
+  #latestOrdersSec .lo-info{ min-width:0; flex:1; }
+  #latestOrdersSec .lo-user{ font-weight:800; font-size:14px; color:#5b7bff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #latestOrdersSec .lo-name{ font-weight:700; font-size:13px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  #latestOrdersSec .lo-time{ font-size:11px; color:#8a8fa6; margin-top:3px; font-family:'Rajdhani',sans-serif; text-align:right; }
+  @media (prefers-reduced-motion:reduce){ #latestOrdersSec .lo-move{ animation-duration:120s; } }
+
+  /* ຂາຍດີປະຈຳອາທິດ: ລາກແລ້ວຄີບເປັນບລັອກລະ 2 ໃບ */
+  #recentBuySec .rb-track{ scroll-snap-type:x mandatory; scroll-padding:0 2px; overscroll-behavior-x:contain; }
+  #recentBuySec .rb-card{ scroll-snap-align:none; }
+  #recentBuySec .rb-card.rb-snap{ scroll-snap-align:start; scroll-snap-stop:always; }
   #recentBuySec .rb-card{ flex:0 0 calc(50% - 7px); max-width:none; display:flex; flex-direction:column; gap:0; padding:0; border-radius:24px; overflow:hidden; background:linear-gradient(180deg,#0d0d13,#060609); border:1px solid rgba(255,255,255,.08); cursor:pointer; }
   @media(min-width:640px){ #recentBuySec .rb-card{ flex-basis:250px; } }
   #recentBuySec .rb-img{ position:relative; width:100%; aspect-ratio:1/.92; flex-shrink:0; border-radius:0; border:0; }
@@ -912,6 +933,10 @@ document.querySelectorAll('.site-logo-slot').forEach(function(el){ el.innerHTML=
   #recentBuySec .rb-sold.zero{ color:#9aa0b8; } #recentBuySec .rb-sold.zero i{ color:#6d7189; }
   #recentBuySec .rb-arrow{ position:absolute; top:42%; transform:translateY(-50%); z-index:5; width:44px; height:52px; border-radius:16px; background:rgba(5,5,10,.92); border:1px solid rgba(80,100,255,.35); color:#4d6bff; display:flex; align-items:center; justify-content:center; }
   </style>
+  <div id="latestOrdersSec" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-0 hidden">
+    <div class="lo-head"><h2>ລາຍການສັ່ງຊື້ລ່າສຸດ</h2><p>ລາຍການສິນຄ້າທີ່ເພິ່ງຖືກສັ່ງຊື້</p></div>
+    <div class="lo-view"><div id="latestOrdersTrack" class="lo-move"></div></div>
+  </div>
   <div id="recentBuySec" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
     <div class="rb-head">
       <span class="rb-cal"><i class="fa-regular fa-calendar"></i></span>
@@ -2507,7 +2532,72 @@ function renderHomeGrids(){
     document.getElementById('heroFeatured').classList.remove('skeleton');
   }
 }
-function _rbInit(){ try{ renderRecentPurchases(); }catch(e){ console.warn(e); } }
+function _rbInit(){ try{ renderLatestOrders(); }catch(e){ console.warn(e); } try{ renderRecentPurchases(); }catch(e){ console.warn(e); } }
+// ---- ລາຍການສັ່ງຊື້ລ່າສຸດ: ແຖບເລື່ອນວົນ (ຊື່ຖືກປິດບາງສ່ວນ ad***kh) ----
+let _loSig = '', _loPub = [], _loPubAt = 0, _loFetching = false;
+function loMask(n){ n = String(n||'').trim(); if(!n) return '***'; return n.length <= 3 ? n.charAt(0) + '***' : n.slice(0,2) + '***' + n.slice(-2); }
+function loTime(iso){ const d = new Date(iso); if(isNaN(d)) return ''; const z = x=>String(x).padStart(2,'0'); return z(d.getHours())+':'+z(d.getMinutes())+' '+z(d.getDate())+'/'+z(d.getMonth()+1)+'/'+d.getFullYear(); }
+async function publishRecentOrder(order, user, product){
+  // ບັນທຶກລາຍການລ່າສຸດ (ປິດຊື່ແລ້ວ) ໄວ້ໃນ doc ສາທາລະນະ ເພື່ອໃຫ້ທຸກຄົນທີ່ເຂົ້າເວັບເຫັນ
+  try{
+    if(!BACKEND_ENABLED || !order || !product) return;
+    if(!fbAuth.currentUser){ try{ await fbAuth.signInAnonymously(); }catch(e){} }
+    const ref = fbDb.collection('shopData').doc('recentOrders');
+    const d = await ref.get();
+    const old = (d.exists && d.data() && Array.isArray(d.data().items)) ? d.data().items : [];
+    const item = { id:order.id, u:loMask(user && user.username), pid:product.id, n:String(product.name||'').slice(0,80), at:order.createdAt || nowISO() };
+    const items = [item].concat(old.filter(x=>x && x.id !== item.id)).slice(0,20);
+    await ref.set({ items:items, updatedAt:nowISO() });
+    _loPub = items; _loPubAt = Date.now();
+  }catch(e){ console.warn('Could not publish recent order', e); }
+}
+async function _loFetchPublic(){
+  if(_loFetching || !BACKEND_ENABLED) return;
+  if(Date.now() - _loPubAt < 45000) return;
+  _loFetching = true;
+  try{
+    if(!fbAuth.currentUser){ try{ await fbAuth.signInAnonymously(); }catch(e){} }
+    const d = await fbDb.collection('shopData').doc('recentOrders').get();
+    _loPubAt = Date.now();
+    if(d.exists && d.data() && Array.isArray(d.data().items)){ _loPub = d.data().items; renderLatestOrders(); }
+  }catch(e){ _loPubAt = Date.now(); console.warn('Could not read recent orders', e); }
+  _loFetching = false;
+}
+function renderLatestOrders(){
+  const sec = document.getElementById('latestOrdersSec'); const track = document.getElementById('latestOrdersTrack');
+  if(!sec || !track) return;
+  const products = loadDB(DB_KEYS.products, []);
+  const users = loadDB(DB_KEYS.users, []);
+  const byP = {}; products.forEach(p=>{ byP[p.id] = p; });
+  const byU = {}; users.forEach(u=>{ byU[u.id] = u; });
+  const rows = {};
+  _loPub.forEach(x=>{ if(x && x.id) rows[x.id] = { id:x.id, u:x.u, pid:x.pid, n:x.n, at:x.at }; });
+  loadDB(DB_KEYS.orders, []).forEach(o=>{
+    if(o.status !== 'completed' || !o.productId || rows[o.id]) return;
+    const u = byU[o.userId]; if(!u) return;
+    rows[o.id] = { id:o.id, u:loMask(u.username), pid:o.productId, n:(byP[o.productId]||{}).name || '', at:o.createdAt };
+  });
+  const list = Object.keys(rows).map(k=>rows[k]).filter(r=>r.n || byP[r.pid]).sort((a,b)=> new Date(b.at) - new Date(a.at)).slice(0,12);
+  if(!list.length){ sec.classList.add('hidden'); _loSig = ''; _loFetchPublic(); return; }
+  const sig = list.map(r=>r.id+'|'+((byP[r.pid]&&byP[r.pid].images&&byP[r.pid].images[0])||'').length).join('~');
+  sec.classList.remove('hidden');
+  if(sig !== _loSig){
+    _loSig = sig;
+    let seq = list.slice(); while(seq.length < 6) seq = seq.concat(list);
+    const card = r=>{
+      const p = byP[r.pid]; const img = p && p.images && p.images[0];
+      return `<div class="lo-card">
+        <div class="lo-img">${img ? `<img src="${img}" loading="lazy" alt="">` : '<i class="fa-solid fa-bag-shopping"></i>'}</div>
+        <div class="lo-info"><p class="lo-user">${escapeHtml(r.u)}</p><p class="lo-name">${escapeHtml((p&&p.name)||r.n)}</p><p class="lo-time">${loTime(r.at)}</p></div>
+      </div>`;
+    };
+    const one = seq.map(card).join('');
+    track.innerHTML = one + one;   // ສຳເນົາ 2 ຊຸດ ເພື່ອໃຫ້ວົນຕໍ່ເນື່ອງບໍ່ກະຕຸກ
+    track.style.setProperty('--lo-dur', (seq.length * 5) + 's');
+  }
+  _loFetchPublic();
+}
+
 function emptyState(msg){ return `<div class="col-span-full text-center py-10 text-mist-400"><i class="fa-solid fa-box-open text-3xl mb-2"></i><p>${msg}</p></div>`; }
 
 
@@ -2520,13 +2610,13 @@ function _rbNormalize(track){
   const full = _rbN * _rbStep(track);
   if(_rbN > 0 && track.scrollLeft >= full - 1) track.scrollLeft -= full;
 }
-function rbScroll(dir){
+function rbScroll(dir){ dir = dir * 2;  // 1 ກົດ = 1 ບລັອກ (2 ໃບ)
   const track = document.getElementById('recentBuyTrack'); if(!track || !_rbN) return;
   _rbPauseUntil = Date.now() + 3000;
   const step = _rbStep(track);
   if(dir < 0 && track.scrollLeft <= 1) track.scrollLeft += _rbN * step;
   _rbNormalize(track);
-  const idx = Math.round(track.scrollLeft / step);
+  let idx = Math.round(track.scrollLeft / step); idx -= idx % 2;
   track.scrollTo({ left: (idx + dir) * step, behavior:'smooth' });
 }
 function _rbTick(){
@@ -2535,8 +2625,8 @@ function _rbTick(){
   const step = _rbStep(track);
   if(_rbN * step <= track.clientWidth + 4) return;   // everything already fits, nothing to slide
   _rbNormalize(track);
-  const idx = Math.round(track.scrollLeft / step);
-  track.scrollTo({ left: (idx + 1) * step, behavior:'smooth' });
+  let idx = Math.round(track.scrollLeft / step); idx -= idx % 2;
+  track.scrollTo({ left: (idx + 2) * step, behavior:'smooth' });
 }
 function renderRecentPurchases(){
   const sec = document.getElementById('recentBuySec'); const track = document.getElementById('recentBuyTrack');
@@ -2570,10 +2660,13 @@ function renderRecentPurchases(){
       </div>
     </div>`;
   };
-  _rbN = products.length;
+  const base = products.length;
+  const cyc = (base % 2 === 1) ? products.concat(products) : products;   // even count so 2-card blocks stay aligned when looping
+  _rbN = base ? cyc.length : 0;
   sec.classList.toggle('hidden', _rbN===0);
-  const clones = products.slice(0, Math.min(_rbN, 5));   // copies of the first cards placed after the last one
-  track.innerHTML = products.map(cardHtml).join('') + clones.map(cardHtml).join('');
+  const clones = cyc.slice(0, Math.min(_rbN, 6));   // copies of the first cards placed after the last one
+  track.innerHTML = cyc.concat(clones).map(cardHtml).join('');
+  Array.prototype.forEach.call(track.children, (c,i)=>{ if(i % 2 === 0) c.classList.add('rb-snap'); });
   track.scrollLeft = 0;
   if(!_rbInited){
     _rbInited = true;
@@ -2610,6 +2703,7 @@ function _paintHeroStats(userCount){
     const _stk = products.filter(p=>p.status==='available' && !p.maintenance).reduce((n,p)=> n + ((p.stock===undefined||p.stock===null||p.stock==='') ? 1 : (parseInt(p.stock)||0)), 0);
     const cS = document.getElementById('cardStatStock'); if(cS) cS.textContent = fmtK(_stk);
   }
+  try{ renderLatestOrders(); }catch(e){}
   renderRecentPurchases();
   renderNewGrid();
   try{ if(typeof pxrShowRefresh==='function') pxrShowRefresh(); }catch(e){}
@@ -3545,6 +3639,7 @@ async function buyNow(productId){
   const orders = loadDB(DB_KEYS.orders,[]);
   newOrders.slice().reverse().forEach(o=>orders.unshift(o));
   saveDB(DB_KEYS.orders, orders);
+  try{ publishRecentOrder(order, user, pFresh || p); }catch(e){}
   log('ORDER_WALLET_PAY', `${user.username} ຊື້ ${itemLabel} ₭${fmtK(freshPrice*qty)} (ຮັບທັນທີ)`);
   // ແຈ້ງ Facebook
   const settings = loadDB(DB_KEYS.settings,{});
