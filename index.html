@@ -273,7 +273,7 @@ function pxrAct(k){
     if(k==='topup'){ mmDashTab('wallet'); }
     else if(k==='history'){ mmDashTab('mycards'); }
     else if(k==='profile'){ mmDashTab('profile'); }
-    else if(k==='topuplog'){ mmDashTab('wallet'); setTimeout(function(){ if(window.pxrTpHistory) pxrTpHistory(false); },200); }
+    else if(k==='topuplog'){ window._noGuideUntil = Date.now()+3000; mmDashTab('wallet'); setTimeout(function(){ if(window.pxrTpHistory) pxrTpHistory(false); },200); }
   };
   /* no wave for: scroll-only, logout (has its own flow) */
   if(k==='products'){ try{ pxrCloseUser(); }catch(e){} var el=document.getElementById('categorySec')||document.getElementById('recentBuySec'); if(el) el.scrollIntoView({behavior:'smooth'}); return; }
@@ -1022,6 +1022,7 @@ body.auth-open #view-home{ display:block !important; }
 #view-auth .au-foot{ text-align:center; font-size:15px; color:#a5a4ac; margin:21px 0 2px; }
 #view-auth .au-foot button{ background:none; border:0; padding:0; color:#3a4bff; font-weight:700; font:inherit; font-weight:700; cursor:pointer; }
 </style>
+  <div id="auLinkTop" style="display:none;max-width:440px;margin:-62px auto 14px"><a id="auLinkTopA" href="#" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:10px;height:46px;border-radius:16px;text-decoration:none;color:#fff;font:800 15px 'Noto Sans Lao','Inter',sans-serif;background:linear-gradient(135deg,#3d4cff,#1725ef);box-shadow:0 10px 26px -8px rgba(40,56,255,.75),inset 0 1px 0 rgba(255,255,255,.18);padding:0 16px;text-align:center"><i class="fa-solid fa-arrow-up-right-from-square"></i><span id="auLinkTopT"></span></a></div>
   <div class="au-card" role="dialog" aria-modal="true">
     <div class="au-head"><div class="site-logo-slot au-logo"><i class="fa-solid fa-gamepad"></i></div><span class="site-name-text au-name">PXR SHOP</span></div>
     <div class="au-body">
@@ -1994,6 +1995,9 @@ async function refreshOwnUserFromFirestore(){
     if(!snap.exists) return;
     const remote = snap.data();
     if(sessionKicked(remote)){ forceLogoutOtherDevice(); return; }
+    if(SESSION && SESSION.tok == null && !remote.sessionTok){   // ເຊດຊັນເກົ່າທີ່ຍັງບໍ່ມີ token → ຈອງດຽວນີ້ ເພື່ອໃຫ້ລະບົບ 1 ເຄື່ອງ/ບັນຊີ ໃຊ້ໄດ້ກັບທຸກເຄື່ອງ
+      const _t = uid('ses'); if(await claimSession(SESSION.id, _t)){ SESSION.tok = _t; saveDB(DB_KEYS.session, SESSION); }
+    }
     const users = loadDB(DB_KEYS.users, []);
     const idx = users.findIndex(u=>u.id===SESSION.id);
     if(idx>-1){ users[idx] = {...users[idx], ...remote}; if(remote.agentId===undefined) delete users[idx].agentId; } else { users.push(remote); }
@@ -2040,6 +2044,20 @@ function forceLogoutOtherDevice(){
   }catch(e){}
   setTimeout(()=>{ _kicking = false; }, 1500);
 }
+// ກວດກັບເຊີເວີທັນທີ (ບໍ່ລໍຖ້າ listener) — ໃຊ້ກ່ອນເຮັດລາຍການສຳຄັນ ແລະ ຕອນກັບມາເປີດແອັບ ເພື່ອເຄື່ອງເກົ່າທີ່ຖືກເດັ່ງແລ້ວ ເຮັດຫຍັງຕໍ່ບໍ່ໄດ້
+async function verifySession(){
+  if(!BACKEND_ENABLED || !SESSION || SESSION.role!=='user') return true;
+  try{
+    let snap; try{ snap = await fbDb.collection('users').doc(SESSION.id).get({source:'server'}); }catch(_e){ return true; }   // ເນັດຂັດຂ້ອງ → ບໍ່ບລັອກ
+    if(snap && snap.exists && sessionKicked(snap.data())){ forceLogoutOtherDevice(); return false; }
+  }catch(e){}
+  return true;
+}
+(function(){
+  var last = 0;
+  function wake(){ var n = Date.now(); if(n - last < 3000) return; last = n; try{ if(SESSION && SESSION.role==='user') refreshOwnUserFromFirestore(); }catch(e){} }
+  window.addEventListener('pageshow', wake); window.addEventListener('focus', wake); window.addEventListener('online', wake);
+})();
 var _ownUserUnsub = null, _ownUserLiveId = null;
 function stopOwnUserLive(){ try{ if(_ownUserUnsub) _ownUserUnsub(); }catch(e){} _ownUserUnsub = null; _ownUserLiveId = null; }
 function startOwnUserLive(){
@@ -2172,6 +2190,7 @@ function go(view, skipHash){
   window.scrollTo({top:0, behavior:'smooth'});
   document.getElementById('mobileMenu').classList.add('hidden');
   if(view==='category') renderCategoryPage();
+  if(view==='auth'){ try{ window._syncTopupGuideBtn&&window._syncTopupGuideBtn(); }catch(e){} }
   if(view==='home' && window._returnToCat){ window._returnToCat = false; setTimeout(()=>{ const el = document.getElementById('categorySec'); if(el && !el.classList.contains('hidden')) el.scrollIntoView({block:'start'}); }, 80); }
   if(view==='dashboard') { fillDashboard(); window._pxrInGo=true; try{ dashShowMenu(); }finally{ window._pxrInGo=false; } if(window._pendingDashTab){ dashTab(window._pendingDashTab); } }
 }
@@ -2951,7 +2970,7 @@ function dashTab(tab){
   if(tab==='profile'){ try{ pfRender(true); }catch(e){} }
   document.querySelectorAll('.dashnav').forEach(b=>b.classList.remove('bg-ink-700','text-mist-100'));
   document.querySelector(`[data-dashtab="${tab}"]`).classList.add('bg-ink-700','text-mist-100');
-  if(tab==='wallet'){ renderWallet(); refreshOwnUserFromFirestore();  try{ window._syncTopupGuideBtn&&window._syncTopupGuideBtn(); window.openTopupGuide&&window.openTopupGuide(); }catch(e){} }
+  if(tab==='wallet'){ renderWallet(); refreshOwnUserFromFirestore();  try{ window._syncTopupGuideBtn&&window._syncTopupGuideBtn(); if(Date.now() > (window._noGuideUntil||0)) window.openTopupGuide&&window.openTopupGuide(); }catch(e){} }
   if(tab==='mycards') renderMyCards();
   if(tab==='agent') renderAgentPanel();
   // Jump straight into the picked section (hide the menu list) instead of
@@ -3945,9 +3964,16 @@ try{ renderWheelSection(); }catch(e){}
     document.body.style.overflow = '';
   };
   window._syncTopupGuideBtn = function(){
-    var b = $('topupGuideBtn'); if(!b) return;
     var st = settings();
-    b.style.display = (st.topupGuideImage || ytId(st.topupGuideVideo)) ? 'flex' : 'none';
+    var b = $('topupGuideBtn');
+    if(b) b.style.display = (st.topupGuideImage || ytId(st.topupGuideVideo)) ? 'flex' : 'none';
+    // ປຸ່ມລິ້ງ (ແອດມິນຕັ້ງ) ຢູ່ເທິງສຸດຂອງໜ້າ ລົງຊື່ເຂົ້າໃຊ້
+    var box = $('auLinkTop'), a = $('auLinkTopA'), t = $('auLinkTopT');
+    if(box && a && t){
+      var url = String(st.topupGuideLinkUrl || '').trim(), label = String(st.topupGuideLinkLabel || '').trim();
+      if(/^https?:\/\//i.test(url) && label){ a.href = url; t.textContent = label; box.style.display = 'block'; }
+      else { a.removeAttribute('href'); t.textContent = ''; box.style.display = 'none'; }
+    }
   };
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape') window.closeTopupGuide(); });
 
@@ -5762,5 +5788,15 @@ html, body{ touch-action:manipulation; }
 #topStack a, #topStack a *{ animation:none !important; }
 #topStack header{ -webkit-transform:translateZ(0); transform:translateZ(0); }
 </style>
+<script>
+/* ເຄື່ອງທີ່ຖືກເດັ່ງອອກແລ້ວ ຈະຊື້/ເຕີມເງິນ/ແລກໂຄດ/ໝູນວົງລໍ້ ບໍ່ໄດ້ — ກວດກັບເຊີເວີກ່ອນທຸກຄັ້ງ */
+(function(){
+  ['buyNow','submitTopup','pxrTpCreate','redeemCode','wheelSpin'].forEach(function(n){
+    var f = window[n]; if(typeof f !== 'function' || f.__sg) return;
+    var g = async function(){ if(!(await verifySession())) return; return f.apply(this, arguments); };
+    g.__sg = true; window[n] = g;
+  });
+})();
+</script>
 </body>
 </html>
