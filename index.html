@@ -1446,11 +1446,39 @@ async function publishPublicStats(count){
     await fbDb.collection('shopData').doc('publicStats').set({ users: Number(count)||0, updatedAt: new Date().toISOString() }, { merge:true });
   }catch(e){ console.warn('Could not publish public stats', e); }
 }
+// ===== ຍອດ "ຂາຍແລ້ວ" ລວມ (ທຸກຄົນເຫັນຄືກັນ) =====
+// ເມື່ອກ່ອນນັບຈາກອໍເດີທີ່ຢູ່ໃນເຄື່ອງຂອງລູກຄ້າເອງ ຈຶ່ງເຫັນສະເພາະອັນທີ່ຕົນເອງຊື້. ຕອນນີ້ເກັບຍອດລວມໄວ້ໃນ shopData/publicStats (soldBy + completedTotal)
+// - ລູກຄ້າທຸກຄົນບວກເພີ່ມຕອນຊື້ສຳເລັດ; ແອດມິນເປີດໜ້າແອດມິນຈະເຜີຍແຜ່ຍອດເກົ່າທັງໝົດໃຫ້ (ເອົາຄ່າສູງສຸດ ບໍ່ນັບຊ້ຳ)
+window._pubSold = window._pubSold || {}; window._pubSoldTotal = window._pubSoldTotal || 0;
+try{ var _pc = JSON.parse(localStorage.getItem('vp_pub_sold')||'null'); if(_pc){ window._pubSold = _pc.m || {}; window._pubSoldTotal = Number(_pc.t)||0; } }catch(e){}
+var _pubSoldSig = '';
+function _applyPubSold(data){
+  try{
+    if(!data) return;
+    var m = (data.soldBy && typeof data.soldBy==='object') ? data.soldBy : {};
+    var tot = Number(data.completedTotal)||0;
+    var sig = JSON.stringify(m)+'|'+tot;
+    if(sig===_pubSoldSig) return; _pubSoldSig = sig;
+    window._pubSold = m; window._pubSoldTotal = tot;
+    try{ localStorage.setItem('vp_pub_sold', JSON.stringify({m:m,t:tot})); }catch(e){}
+    clearTimeout(window._pubSoldT);
+    window._pubSoldT = setTimeout(function(){ try{ renderHomeGrids(); }catch(e){} try{ _paintHeroStats(null); }catch(e){} }, 150);
+  }catch(e){}
+}
+async function publishSoldDelta(pid, qty){
+  if(!BACKEND_ENABLED || !pid) return;
+  try{
+    if(!fbAuth.currentUser){ try{ await fbAuth.signInAnonymously(); }catch(e){} }
+    var q = Number(qty)||1, so = {}; so[pid] = firebase.firestore.FieldValue.increment(q);
+    await fbDb.collection('shopData').doc('publicStats').set({ soldBy: so, completedTotal: firebase.firestore.FieldValue.increment(q), updatedAt: new Date().toISOString() }, { merge:true });
+  }catch(e){ console.warn('Could not publish sold count', e); }
+}
 async function readPublicUserCount(){
   if(!BACKEND_ENABLED) return null;
   try{
     if(!fbAuth.currentUser){ try{ await fbAuth.signInAnonymously(); }catch(e){} }
     const d = await fbDb.collection('shopData').doc('publicStats').get();
+    if(d.exists && d.data()) _applyPubSold(d.data());
     if(d.exists && d.data() && d.data().users != null) return Number(d.data().users)||0;
   }catch(e){ console.warn('Could not read public stats', e); }
   return null;
@@ -2793,7 +2821,7 @@ async function updateHeroStats(){
 function _paintHeroStats(userCount){
   const orders = loadDB(DB_KEYS.orders, []);
   const products = loadDB(DB_KEYS.products, []);
-  const completed = orders.filter(o=>o.status==='completed').length;
+  const completed = Math.max(orders.filter(o=>o.status==='completed').length, Number(window._pubSoldTotal)||0);
   const topupTotal = loadDB(DB_KEYS.topups, []).filter(t=>t.status==='completed').reduce((sum,t)=> sum + (Number(t.amount)||0), 0);
   document.getElementById('heroLiveCount').textContent = products.filter(p=>p.status==='available').length;
   const cU = document.getElementById('cardStatUsers');
@@ -2853,6 +2881,8 @@ let HOME_FILTER = { q:'', cat:'' };
 function completedOrderCounts(){
   const counts = {};
   loadDB(DB_KEYS.orders, []).forEach(o=>{ if(o.status==='completed' && o.productId) counts[o.productId] = (counts[o.productId]||0) + 1; });
+  const pub = window._pubSold || {};      // ຍອດລວມຂອງທຸກຄົນ (ຖ້າສູງກວ່າທີ່ນັບໃນເຄື່ອງ ໃຫ້ໃຊ້ຍອດລວມ)
+  Object.keys(pub).forEach(k=>{ const v = Number(pub[k])||0; if(v > (counts[k]||0)) counts[k] = v; });
   return counts;
 }
 // Split by completed orders: 2+ orders -> "ສິນຄ້າແນະນຳ", fewer than 2 -> "ສິນຄ້າທັງໝົດ"
@@ -3852,6 +3882,7 @@ async function buyNow(productId){
   newOrders.slice().reverse().forEach(o=>orders.unshift(o));
   saveDB(DB_KEYS.orders, orders);
   try{ publishRecentOrder(order, user, pFresh || p); }catch(e){}
+  try{ publishSoldDelta(p.id, qty); }catch(e){}
   log('ORDER_WALLET_PAY', `${user.username} ຊື້ ${itemLabel} ₭${fmtK(freshPrice*qty)} (ຮັບທັນທີ)`);
   // ແຈ້ງ Facebook
   const settings = loadDB(DB_KEYS.settings,{});
@@ -5828,6 +5859,7 @@ html,body{-webkit-tap-highlight-color:transparent}
       if(!listened.__stats){
         listened.__stats = true;
         fbDb.collection('shopData').doc('publicStats').onSnapshot(function(d){
+          try{ if(d.exists) _applyPubSold(d.data()); }catch(e){}
           if(isAdmin()) return;
           var c = d.exists && d.data() && d.data().users;
           var el = document.getElementById('cardStatUsers');
@@ -5994,6 +6026,7 @@ html, body{ overflow-x:clip; overscroll-behavior-x:none; max-width:100%; }
     if(started) return; started = true;
     /* 2) ຈຳນວນຜູ້ໃຊ້ງານ: ຟັງສົດ ແລະ ຈື່ໄວ້ */
     fbDb.collection('shopData').doc('publicStats').onSnapshot(function(d){
+      try{ if(d.exists) _applyPubSold(d.data()); }catch(e){}
       var c = d.exists && d.data() && d.data().users;
       if(c == null) return;
       try{ localStorage.setItem(CK, String(c)); }catch(e){}
