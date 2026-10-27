@@ -709,7 +709,10 @@ body.pf-on #pxrFab, body.pf-on #pxrFabMenu{ display:none !important; }
 
   function resize(){
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth; H = window.innerHeight;
+    var nW = window.innerWidth, nH = window.innerHeight;
+    /* FIX: ແຖບ URL ຂອງມືຖືຍຸບ/ຂະຫຍາຍຕອນເລື່ອນ ເຮັດໃຫ້ resize ຍິງຖີ່ ແລະຕັ້ງ canvas ໃໝ່ທຸກເທື່ອ → ກະຕຸກ. ຂ້າມຖ້າປ່ຽນໜ້ອຍ */
+    if(W && nW===W && Math.abs(nH-H)<160 && canvas.width){ return; }
+    W = nW; H = nH;
     canvas.width = W*dpr; canvas.height = H*dpr;
     ctx.setTransform(dpr,0,0,dpr,0,0);
     const target = Math.round(Math.min(W*H/9000, 160)); // scales with screen size
@@ -985,14 +988,6 @@ document.querySelectorAll('.site-logo-slot').forEach(function(el){ el.innerHTML=
     <div id="maintGrid" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"></div>
   </div>
 
-  <div id="wheelSec" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 hidden">
-    <div class="rounded-2xl border border-plasma-500/40 bg-ink-800/60 p-6 text-center shadow-glow">
-      <h2 class="font-display font-700 text-2xl text-mist-100">🎡 ວົງລໍສິນຄ້າ</h2>
-      <p class="text-mist-300 text-sm mt-1">ຫມຸນແລ້ວໄດ້ສິນຄ້າທີ່ເສັ້ນແດງຊີ້ ທັນທີ — ລາຄາຫມຸນ <b id="wheelSecPrice" class="text-ion-400"></b></p>
-      <button onclick="openWheel()" class="mt-4 px-6 py-3 rounded-lg bg-plasma-500 hover:bg-plasma-600 text-white font-display font-600">ເປີດວົງລໍ</button>
-    </div>
-  </div>
-
 
 
 
@@ -1206,7 +1201,6 @@ body.auth-open #view-home{ display:block !important; }
       </ol>
     </div>
     <div class="tp-extra">
-      <button type="button" class="tp-ghost" onclick="openRedeemCode()"><i class="fa-solid fa-ticket"></i> ໂຄດເຕີມເງິນ</button>
       <button id="topupGuideBtn" type="button" class="tp-ghost" onclick="openTopupGuide()" style="display:none"><i class="fa-solid fa-circle-question"></i> ເບິ່ງວິທີເຕີມເງິນ</button>
       <button type="button" class="tp-ghost" onclick="wvGo(function(){pxrTpHistory(false)})"><i class="fa-regular fa-clock"></i> ປະຫວັດເຕີມເງິນ</button>
     </div>
@@ -1353,7 +1347,7 @@ body.auth-open #view-home{ display:block !important; }
       <div class="flex gap-3 text-mist-400 text-lg"></div>
     </div>
   </div>
-  <div class="border-t border-ink-700/60 pt-6 pb-40 text-center text-sm text-mist-400" style="border-color:rgba(255,255,255,.08)">© 2026 <span class="site-name-text">STONE SHOP</span> . ຄວາມເປັນສ່ວນຕົວ</div>
+  <div class="border-t border-ink-700/60 pt-6 pb-8 text-center text-sm text-mist-400" style="border-color:rgba(255,255,255,.08)">© 2026 <span class="site-name-text">STONE SHOP</span> . ຄວາມເປັນສ່ວນຕົວ</div>
 </footer>
 
 
@@ -1583,8 +1577,10 @@ function pullAdminDataFromFirestore(force, keys){
         const remote = d.data() && d.data().data;
         if(remote === undefined || remote === null) return;
         // cloud copy is the single source of truth (see earlier delete-sticks fix)
-        const s = JSON.stringify(remote);
-        if(localStorage.getItem(DB_KEYS[key]) !== s){ localStorage.setItem(DB_KEYS[key], s); changed = true; }
+        try{
+          const s = JSON.stringify(remote);
+          if(localStorage.getItem(DB_KEYS[key]) !== s){ localStorage.setItem(DB_KEYS[key], s); changed = true; }
+        }catch(e){ console.warn('pull save failed for', key, e); }
       });
       _lastPullAt = Date.now();
     }catch(e){ console.warn('Failed to pull admin data from Firestore', e); }
@@ -1709,7 +1705,7 @@ function loadDB(key, fallback){
   }catch(e){ return fallback; }
 }
 function saveDB(key, val){
-  localStorage.setItem(key, JSON.stringify(val));
+  try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){ console.warn('localStorage save failed for', key, e); }
   if(key === DB_KEYS.users && Array.isArray(val)){
     // PERF: only push users that actually changed (was: EVERY user on every save)
     val.forEach(u=>{
@@ -2136,7 +2132,7 @@ function _liveRerender(){
     try{ const ap=document.getElementById('dt-agent'); if(ap && !ap.classList.contains('hidden') && typeof renderAgentPanel==='function') renderAgentPanel(); }catch(e){}
     try{ const cv=document.getElementById('view-category'); if(cv && cv.classList.contains('active')) renderCategoryPage(); }catch(e){}
     try{ const m=document.getElementById('productModal'); if(m && !m.classList.contains('hidden') && _currentModalProduct){ const id=_currentModalProduct.id; if(loadDB(DB_KEYS.products,[]).some(p=>p.id===id)){ if(window.pxrRefreshPDP) pxrRefreshPDP(id); } else closeProductModal(); } }catch(e){}
-  }, 250);
+  }, 80);
 }
 function startLiveSync(){
   if(!BACKEND_ENABLED) return;
@@ -2149,7 +2145,9 @@ function startLiveSync(){
         const remote = snap.exists && snap.data() && snap.data().data;
         if(remote===undefined || remote===null) return;
         const str = JSON.stringify(remote);
-        if(localStorage.getItem(DB_KEYS[key]) !== str){ localStorage.setItem(DB_KEYS[key], str); _liveRerender(); }
+        let _chg = false;
+        try{ if(localStorage.getItem(DB_KEYS[key]) !== str){ localStorage.setItem(DB_KEYS[key], str); _chg = true; } }catch(e){ console.warn('live save failed', key, e); }
+        if(_chg){ _liveRerender(); if(key==='settings'){ try{ window._repaintPaymentQr && window._repaintPaymentQr(); }catch(e){} } }
       }, e=>console.warn('live sync failed for', key, e));
     });
   }).catch(()=>{});
@@ -2171,7 +2169,7 @@ setTimeout(_hideLoadOverlay, 1200);   // failsafe
   // ເປີດໄວ: ຜູ້ເຂົ້າຊົມທີ່ມີແຄຊຢູ່ແລ້ວ ເຫັນເວັບທັນທີ ແລ້ວ sync ຖານຂໍ້ມູນ ໃນພື້ນຫຼັງ; ຄົນໃໝ່ລໍຖ້າຂໍ້ມູນສູງສຸດ ~3.5 ວິນາທີ
   const _hadCache = (loadDB(DB_KEYS.products, []) || []).length > 0;
   const _bgSync = (async()=>{
-    await _withTimeout(waitForAuthReady(1200), 1500);
+    await _withTimeout(waitForAuthReady(700), 900);
     await _withTimeout(_ensureAuth(), 4000);
     startLiveSync();   // ສິນຄ້າ/ການຕັ້ງຄ່າ/ຕົວແທນ ມາທັນທີແບບ push (ບໍ່ລໍຖ້າດຶງ 7 ເອກະສານ)
     await _withTimeout(pullAdminDataFromFirestore(true, ['admins','orders','logs','topups']), 8000);   // ສ່ວນທີ່ເຫຼືອ ດຶງຂະໜານໃນພື້ນຫຼັງ
@@ -2566,9 +2564,11 @@ async function _loFetchPublic(){
     const d = await fbDb.collection('shopData').doc('recentOrders').get();
     _loPubAt = Date.now();
     if(d.exists && d.data() && Array.isArray(d.data().items)){ _loPub = d.data().items; renderLatestOrders(); }
-  }catch(e){ _loPubAt = Date.now(); console.warn('Could not read recent orders', e); }
+  }catch(e){ _loPubAt = 0; console.warn('Could not read recent orders', e); }   /* FIX: ຖ້າອ່ານບໍ່ສຳເລັດ (ເນັດ/ລັອກອິນຍັງບໍ່ພ້ອມ) ໃຫ້ລອງໃໝ່ ບໍ່ຕ້ອງລໍຖ້າ 45 ວິ */
   _loFetching = false;
 }
+/* FIX: ແຖບ "ລູກຄ້າຊື້ລ່າສຸດ" ຖ້າຍັງຫວ່າງ/ຖືກຊ່ອນ ໃຫ້ລອງດຶງຂໍ້ມູນໃໝ່ທຸກ 20 ວິ ຈົນມີຂໍ້ມູນ */
+setInterval(function(){ try{ var s=document.getElementById('latestOrdersSec'); if(s && s.classList.contains('hidden') && !document.hidden){ _loPubAt=0; _loFetchPublic(); } }catch(e){} }, 20000);
 function renderLatestOrders(){
   const sec = document.getElementById('latestOrdersSec'); const track = document.getElementById('latestOrdersTrack');
   if(!sec || !track) return;
@@ -3334,16 +3334,31 @@ function confirmTopupAmount(){
   });
 }
 
-function renderPaymentQr(holderId, payload){
+function _paintPaymentQr(holderId, payload){
   const settings = loadDB(DB_KEYS.settings, {qrImage:null});
   const holder = document.getElementById(holderId);
+  if(!holder) return;
   // ໃຊ້ QR ສະເພາະຂອງຈຳນວນເງິນ ຖ້າມີ
   const qrByAmount = settings.qrByAmount || {};
   const amtQr = CURRENT_TOPUP_AMOUNT && qrByAmount[CURRENT_TOPUP_AMOUNT];
   const qrSrc = amtQr || settings.qrImage;
-  if(qrSrc){ holder.innerHTML = `<img src="${qrSrc}" class="w-52 h-52 object-contain">`; }
+  if(qrSrc){
+    const cur = holder.querySelector('img');
+    if(!(cur && cur.getAttribute('src') === qrSrc)) holder.innerHTML = `<img src="${qrSrc}" class="w-52 h-52 object-contain">`;
+  }
   else if(window.QRCode){ holder.innerHTML = `<canvas></canvas>`; QRCode.toCanvas(holder.querySelector('canvas'), payload, { width:208, margin:1, color:{dark:'#050b1e', light:'#FFFFFF'} }); }
 }
+function renderPaymentQr(holderId, payload){
+  _paintPaymentQr(holderId, payload);
+  window._lastPaymentQr = { holderId, payload };
+  // FIX: ດຶງ QR ລ່າສຸດຈາກແອັດມິນທຸກຄັ້ງທີ່ເປີດ QR ຈ່າຍເງິນ (ກັນລູກຄ້າເຫັນ QR ເກົ່າຄ້າງ)
+  try{ pullAdminDataFromFirestore(true, ['settings']).then(()=>{ _paintPaymentQr(holderId, payload); }).catch(()=>{}); }catch(e){}
+}
+window._repaintPaymentQr = function(){
+  const q = window._lastPaymentQr; if(!q) return;
+  const h = document.getElementById(q.holderId);
+  if(h && h.offsetParent !== null) _paintPaymentQr(q.holderId, q.payload);
+};
 /* ===== ບີບອັດສະລິບອັດຕະໂນມັດ ຕອນລູກຄ້າເລືອກຮູບ (ຍັງຄົມຊັດ ໃຫ້ແອັດມິນ/ລະບົບກວດງ່າຍ) =====
    - ບີບຄຸນນະພາບກ່ອນ, ຫຼຸດຂະໜາດເທື່ອລະໜ້ອຍ ແລະບໍ່ຫຼຸດຕ່ຳກວ່າຄວາມກວ້າງຂັ້ນຕ່ຳ ເພື່ອໃຫ້ໂຕເລກ/ໂຕໜັງສືອ່ານອອກ
    - ໃຊ້ WebP ຖ້າບຣາວເຊີຮອງຮັບ (ຄົມກວ່າ JPEG ທີ່ຂະໜາດເທົ່າກັນ) ບໍ່ຮອງຮັບກໍ່ໃຊ້ JPEG
@@ -3687,73 +3702,6 @@ function renderTopupHistory(){
 }
 
 
-// ===== ໂຄດເຕີມເງິນ (Redeem code) =====
-function openRedeemCode(){
-  const user=currentUser();
-  if(!user){ toastErr('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ'); return; }
-  Swal.fire({
-    title:'ໂຄດເຕີມເງິນ',
-    input:'text',
-    inputLabel:'ໃສ່ໂຄດທີ່ທ່ານໄດ້ຮັບ',
-    inputPlaceholder:'XXXXX-XXXXX',
-    inputAttributes:{ autocapitalize:'characters', autocomplete:'off', maxlength:20 },
-    showCancelButton:true, confirmButtonText:'ໃຊ້ໂຄດ', cancelButtonText:'ຍົກເລີກ',
-    background:'#070f29', color:'#e6ebf9', confirmButtonColor:'#22C55E', cancelButtonColor:'#16358c',
-    showLoaderOnConfirm:true,
-    inputValidator:v=>{ if(!v || !v.trim()) return 'ກະລຸນາໃສ່ໂຄດ'; },
-    preConfirm: async (v)=>{
-      try{ return await redeemCode(v); }
-      catch(e){ Swal.showValidationMessage(e.message || 'ໃຊ້ໂຄດບໍ່ສຳເລັດ'); return false; }
-    }
-  }).then(r=>{
-    if(!r.isConfirmed || !r.value) return;
-    Swal.fire({ icon:'success', title:'ເຕີມເງິນສຳເລັດ 🎉',
-      html:`<p style="font-size:22px;color:#7ba2f4;font-family:monospace;">+ ₭ ${fmtK(r.value.amount)}</p>`,
-      background:'#070f29', color:'#e6ebf9', confirmButtonColor:'#2c5ad2' });
-  });
-}
-async function redeemCode(raw){
-  const user=currentUser(); if(!user) throw new Error('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ');
-  const code=String(raw||'').trim().toUpperCase().replace(/\s+/g,'');
-  if(!code || code.includes('/')) throw new Error('ໂຄດບໍ່ຖືກຕ້ອງ');
-  await _ensureAuth();
-  const codeRef=fbDb.collection('shopData').doc('redeemCodes');
-  const userRef=fbDb.collection('users').doc(user.id);
-  let result;
-  try{
-    result=await fbDb.runTransaction(async tx=>{
-      const cs=await tx.get(codeRef);
-      const codes=(cs.exists && cs.data().codes) || {};
-      const c=codes[code];
-      if(!c) throw new Error('ໂຄດບໍ່ຖືກຕ້ອງ');
-      if(!c.active) throw new Error('ໂຄດນີ້ຖືກປິດໃຊ້ງານແລ້ວ');
-      const usedBy=c.usedBy||[];
-      if(usedBy.includes(user.id)) throw new Error('ທ່ານໃຊ້ໂຄດນີ້ໄປແລ້ວ');
-      if((c.usedCount||0)>=c.maxUses) throw new Error('ໂຄດນີ້ຖືກໃຊ້ຄົບຈຳນວນແລ້ວ');
-      const us=await tx.get(userRef);
-      const cur=(us.exists && Number(us.data().balance))||0;
-      const amount=Number(c.amount)||0;
-      c.usedCount=(c.usedCount||0)+1; c.usedBy=[...usedBy,user.id]; c.lastUsedAt=nowISO();
-      tx.set(codeRef,{ codes, updatedAt:nowISO() },{ merge:false });
-      tx.set(userRef,{ balance:cur+amount },{ merge:true });
-      return { amount, newBal:cur+amount };
-    });
-  }catch(e){
-    if(e && e.code==='permission-denied') throw new Error('ໃຊ້ໂຄດບໍ່ໄດ້ ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່ແລ້ວລອງອີກ');
-    throw e;
-  }
-  // mirror new balance into the local cache
-  const us=loadDB(DB_KEYS.users, []);
-  const i=us.findIndex(u=>u.id===user.id);
-  if(i>-1){ us[i].balance=result.newBal; localStorage.setItem(DB_KEYS.users, JSON.stringify(us)); }
-  // record in top-up history (shows in ປະຫວັດການເຕີມເງິນ + counts toward total)
-  const tps=loadDB(DB_KEYS.topups, []);
-  tps.push({ id:uid('top'), userId:user.id, amount:result.amount, slip:null, status:'completed', source:'code', code, createdAt:nowISO(), verifiedAt:nowISO() });
-  saveDB(DB_KEYS.topups, tps);
-  log('TOPUP_CODE', `${user.username} ໃຊ້ໂຄດ ${code} ₭${result.amount}`);
-  try{ renderAuthArea(); renderWallet(); }catch(e){}
-  return result;
-}
 </script>
 
 
@@ -3816,213 +3764,6 @@ async function redeemCode(raw){
 </script>
 
 <!-- ❄ Snow effect (falls continuously) -->
-<script>
-
-// =================== Lucky wheel (horizontal strip, red centre line) ===================
-const WHEEL_W = 124, WHEEL_G = 10;
-let _wheelBusy = false, _wheelLast = null, _wheelImgMap = {};
-function wheelImgOf(x){ const c = _wheelImgMap[x.p.id]; return (c && c.img) || (x.p.images && x.p.images[0]) || ''; }
-function wheelCfg(){ const w = (loadDB(DB_KEYS.settings,{}).wheel)||{}; return { enabled: !!w.enabled && Number(w.price)>0, price: Number(w.price)||0, items: w.items||{}, custom: w.custom||[] }; }
-function wheelPrizeOpt(p){
-  if(!(p.options && p.options.length)) return null;
-  const av = p.options.filter(o=>!(o.pool && !(o.codes||[]).length)).sort((a,b)=>a.price-b.price);
-  return av[0] || null;
-}
-function wheelEligible(){
-  const cfg = wheelCfg();
-  _wheelImgMap = cfg.items || {};
-  // admin-made slots that are not products (e.g. a ❌ "ໂຊກດີຄັ້ງຕໍ່ໄປ"): shown on the wheel, nothing is delivered
-  const customSlots = (cfg.custom||[]).filter(c=>c && c.on!==false && Number(c.weight)>0 && (c.name||c.img))
-    .map(c=>({ p:{ id:c.id, name:c.name||'', images:[c.img||''] }, opt:null, custom:true, w:Math.max(0,Number(c.weight)||0) }));
-  const productSlots = loadDB(DB_KEYS.products,[]).filter(p=>{
-    if(p.status!=='available' || p.maintenance) return false;
-    const st = (p.stock===undefined||p.stock===null||p.stock==='') ? null : (parseInt(p.stock)||0);
-    if(st!==null && st<=0) return false;
-    if(p.options && p.options.length && !wheelPrizeOpt(p)) return false;
-    const it = cfg.items[p.id]; if(it && it.on===false) return false;
-    return true;
-  }).map(p=>{ const it = cfg.items[p.id]; return { p, opt: wheelPrizeOpt(p), w: Math.max(0, Number(it && it.weight!=null ? it.weight : 1)) }; }).filter(x=>x.w>0);
-  return productSlots.concat(customSlots);
-}
-function renderWheelSection(){
-  const sec = document.getElementById('wheelSec'); if(!sec) return;
-  const cfg = wheelCfg();
-  const show = cfg.enabled && wheelEligible().length>0;
-  sec.classList.toggle('hidden', !show);
-  if(show) document.getElementById('wheelSecPrice').textContent = `₭ ${fmtK(cfg.price)}`;
-}
-function _wheelFiller(pool, n, fixed){
-  // fixed: {index: item}. Everything else cycles through ALL prizes in shuffled order, no neighbours repeated
-  const out = []; let bag = [];
-  const refill = ()=>{ bag = pool.slice(); for(let i=bag.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; } };
-  for(let i=0;i<n;i++){
-    if(fixed && fixed[i]){ out.push(fixed[i]); continue; }
-    if(!bag.length) refill();
-    let x = bag.pop();
-    if(pool.length>1 && out.length && out[out.length-1]===x){ if(!bag.length) refill(); const y = bag.pop(); bag.unshift(x); x = y; }
-    out.push(x);
-  }
-  return out;
-}
-function _wheelCard(x, win){
-  const img = wheelImgOf(x);
-  return `<div class="wheel-card ${win?'win':''}"><img src="${img}" alt=""><span>${escapeHtml(x.p.name)}</span></div>`;
-}
-function _wheelCenter(i, jitter){ const vw = document.getElementById('wheelViewport').clientWidth; return vw/2 - (i*(WHEEL_W+WHEEL_G) + WHEEL_W/2 + (jitter||0)); }
-function _wheelRenderIdle(pool){
-  const strip = document.getElementById('wheelStrip');
-  const cards = _wheelFiller(pool, Math.max(14, pool.length*2), _wheelLast?{0:_wheelLast}:null);
-  strip.style.transition = 'none';
-  strip.innerHTML = cards.map(x=>_wheelCard(x)).join('');
-  strip.style.transform = `translateX(${_wheelCenter(0)}px)`;
-}
-function openWheel(){
-  const cfg = wheelCfg(); const pool = wheelEligible();
-  if(!cfg.enabled || !pool.length){ toastErr('ວົງລໍບໍ່ເປີດໃຊ້ງານ'); return; }
-  document.getElementById('wheelModal').classList.remove('hidden');
-  const priceTxt = `₭ ${fmtK(cfg.price)}`;
-  document.getElementById('wheelModalPrice').textContent = priceTxt;
-  document.getElementById('wheelSpinBtn').textContent = `ຫມຸນເລີຍ — ${priceTxt}`;
-  const tot = pool.reduce((s,x)=>s+x.w,0);
-  const _showOdds = !!((loadDB(DB_KEYS.settings,{}).wheel)||{}).showOdds;
-  document.getElementById('wheelOddsWrap').classList.toggle('hidden', !_showOdds);
-  document.getElementById('wheelOdds').innerHTML = pool.map(x=>`<div class="flex items-center gap-2 p-2 rounded-lg bg-ink-800 border border-ink-700"><img src="${wheelImgOf(x)}" class="w-9 h-9 rounded object-cover"><span class="flex-1 min-w-0 truncate text-sm text-mist-200">${escapeHtml(x.p.name)}${x.opt?` <span class="text-mist-400">(${escapeHtml(x.opt.label)})</span>`:''}</span><span class="text-xs font-mono text-ion-400">${(x.w/tot*100).toFixed(1)}%</span></div>`).join('');
-  requestAnimationFrame(()=>_wheelRenderIdle(pool));
-}
-function closeWheel(){ if(_wheelBusy) return; document.getElementById('wheelModal').classList.add('hidden'); }
-async function wheelSpin(){
-  if(_wheelBusy) return;
-  const user = currentUser();
-  if(!user){ toastErr('ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ'); closeWheel(); go('auth'); return; }
-  if(user.suspended){ toastErr('ບັນຊີຂອງທ່ານຖືກລະງັບ, ກະລຸນາຕິດຕໍ່ແອດມິນ'); return; }
-  if(!(await ensurePhone(user))) return;
-  const btn = document.getElementById('wheelSpinBtn');
-  _wheelBusy = true; btn.disabled = true; btn.classList.add('opacity-60'); btn.textContent = 'ກຳລັງດຳເນີນການ...';
-  let claimed = null, win = null, price = 0, done = false;
-  try{
-    try{ await pullAdminDataFromFirestore(true); }catch(e){}
-    const cfg = wheelCfg(); price = cfg.price;
-    const pool = wheelEligible();
-    if(!cfg.enabled || !pool.length){ toastErr('ວົງລໍບໍ່ມີສິນຄ້າຕອນນີ້'); return; }
-    try{ await refreshOwnUserFromFirestore(); Object.assign(user, currentUser()||{}); }catch(e){}
-    if((user.balance||0) < price){
-      const r = await Swal.fire({ icon:'warning', title:'ຍອດເງິນບໍ່ພໍ', html:`<p class="text-sm">ລາຄາຫມຸນ ₭ ${fmtK(price)} · ຍອດເງິນ ₭ ${fmtK(user.balance||0)}</p>`, confirmButtonText:'ເຕີມເງິນ', cancelButtonText:'ຍົກເລີກ', showCancelButton:true, background:'#070f29', color:'#e6ebf9', confirmButtonColor:'#2c5ad2', cancelButtonColor:'#16358c' });
-      if(r.isConfirmed){ _wheelBusy=false; closeWheel(); go('dashboard'); dashTab('wallet'); }
-      return;
-    }
-    // fair weighted pick using the odds shown to the customer
-    const tot = pool.reduce((s,x)=>s+x.w,0);
-    const buf = new Uint32Array(1); crypto.getRandomValues(buf);
-    let r = buf[0]/4294967296*tot; win = pool[pool.length-1];
-    for(const x of pool){ if(r < x.w){ win = x; break; } r -= x.w; }
-    if(!win.custom && win.opt && win.opt.pool){
-      claimed = await claimOptionCode(win.p.id, win.opt.id, win.opt.label);
-      if(claimed === null){ toastErr('ສິນຄ້າເພິ່ງໝົດ, ກະລຸນາລອງຫມຸນໃໝ່'); renderWheelSection(); return; }
-    }
-    try{ await adjustUserBalance(user.id, -price, {strict:true}); }
-    catch(e){
-      if(claimed !== null){ try{ await releaseOptionCode(win.p.id, win.opt.id, win.opt.label, claimed); }catch(e2){} claimed = null; }
-      if(e && e.message==='INSUFFICIENT_BALANCE'){ await refreshOwnUserFromFirestore(); toastErr('ຍອດເງິນບໍ່ພໍ'); } else { console.warn(e); toastErr('ຫັກເງິນບໍ່ສຳເລັດ, ກະລຸນາລອງໃໝ່'); }
-      return;
-    }
-    done = true;
-    const p = win.p, opt = win.opt;
-    const itemLabel = opt ? `${p.name} (${opt.label})` : p.name;
-    const isCustom = !!win.custom;
-    let order = null;
-    if(!isCustom){
-      order = {
-        id: uid('ord'), userId: user.id, productId: p.id, amount: price, optionLabel: opt ? opt.label : null,
-        status:'completed', paymentMethod:'balance', wheel:true, slip:null, createdAt: nowISO(), verifiedAt: nowISO(),
-        deliveryCode: (claimed !== null ? claimed : '') || (opt && !opt.pool && opt.deliveryCode) || p.deliveryCode || `${p.name} — ຕິດຕໍ່ແອດມິນເພື່ອຮັບຂໍ້ມູນສິນຄ້າ`,
-        deliveryVideoUrl: p.videoUrl || null
-      };
-      const allProducts = loadDB(DB_KEYS.products,[]);
-      const pp = allProducts.find(x=>x.id===p.id);
-      if(pp && claimed === null){
-        legacyTakeOne(pp);
-        saveDB(DB_KEYS.products, allProducts);
-      }
-      const orders = loadDB(DB_KEYS.orders,[]); orders.unshift(order); saveDB(DB_KEYS.orders, orders);
-    }
-    log('WHEEL_SPIN', `${user.username} ຫມຸນວົງລໍ ₭${fmtK(price)} ໄດ້ ${itemLabel}`);
-    const settings = loadDB(DB_KEYS.settings,{});
-    sendFacebookNotify(`ລູກຄ້າຫມຸນວົງລໍ\n👤 ${user.username}\n🎁 ${itemLabel}\n💰 ₭${fmtK(price)}`);
-    const us = loadDB(DB_KEYS.users,[]); const ui = us.findIndex(x=>x.id===user.id);
-    if(ui>-1){ us[ui].notifications = us[ui].notifications||[]; us[ui].notifications.push({ id:uid('ntf'), title:'ຫມຸນວົງລໍ', message: isCustom ? `ຜົນຫມຸນວົງລໍ: ${itemLabel}` : `ທ່ານໄດ້ ${itemLabel} ຈາກວົງລໍ. ເບິ່ງລະຫັດໄດ້ທີ່ ສິນຄ້າຊື້ແລ້ວ.`, read:false, at:nowISO() }); saveDB(DB_KEYS.users, us); }
-    renderAuthArea();
-    // ---- animation: strip slides right -> left, stops with the prize under the red line ----
-    const WIN_I = 48, strip = document.getElementById('wheelStrip');
-    const fx = {}; fx[WIN_I] = win; if(_wheelLast) fx[0] = _wheelLast;
-    const cards = _wheelFiller(pool, 60, fx);
-    strip.style.transition = 'none';
-    strip.innerHTML = cards.map((x,i)=>_wheelCard(x, false)).join('');
-    strip.style.transform = `translateX(${_wheelCenter(0)}px)`;
-    void strip.offsetWidth;
-    const jitter = (Math.random()-.5) * WHEEL_W * .6;
-    strip.style.transition = 'transform 6s cubic-bezier(.12,.6,.1,1)';
-    strip.style.transform = `translateX(${_wheelCenter(WIN_I, jitter)}px)`;
-    await new Promise(res=>setTimeout(res, 6300));
-    strip.children[WIN_I].classList.add('win');
-    _wheelLast = win;
-    btn.textContent = 'ກຳລັງສະແດງຜົນ...';
-    await new Promise(res=>setTimeout(res, 500));
-    if(isCustom){
-      await Swal.fire({
-        icon:'info', title:'ຜົນການຫມຸນ',
-        html:`${p.images[0] ? `<img src="${p.images[0]}" style="width:84px;height:84px;object-fit:contain;margin:0 auto 8px;">` : ''}<p style="font-size:15px;color:#e6ebf9;"><b>${escapeHtml(itemLabel)}</b></p>`,
-        background:'#070f29', color:'#e6ebf9', confirmButtonColor:'#2c5ad2', confirmButtonText:'ຕົກລົງ'
-      });
-    } else
-    await Swal.fire({
-      icon:'success', title:'ຍິນດີດ້ວຍ! 🎉',
-      html:`<p style="font-size:14px;color:#6e8cdf;margin-bottom:8px;">ທ່ານໄດ້ຮັບ <b style="color:#e6ebf9;">${escapeHtml(itemLabel)}</b></p>
-            <div style="background:#0a183e;border:1px solid #16358c;border-radius:10px;padding:12px;text-align:left;">
-              <p style="font-size:12px;color:#6e8cdf;margin-bottom:4px;">ລະຫັດ / ຂໍ້ມູນສິນຄ້າ</p>
-              <p style="font-size:13px;color:#7ba2f4;font-family:monospace;word-break:break-all;">${escapeHtml(order.deliveryCode)}</p>
-            </div>`,
-      background:'#070f29', color:'#e6ebf9', confirmButtonColor:'#2c5ad2', confirmButtonText:'ຕົກລົງ'
-    });
-    renderHomeGrids(); updateHeroStats();
-  }catch(e){
-    console.warn(e);
-    if(!done) toastErr('ເກີດຂໍ້ຜິດພາດ, ກະລຸນາລອງໃໝ່');
-  }finally{
-    _wheelBusy = false; btn.disabled = false; btn.classList.remove('opacity-60');
-    btn.textContent = `ຫມຸນເລີຍ — ₭ ${fmtK(wheelCfg().price)}`;
-    if(done){ const pool2 = wheelEligible(); if(!pool2.length) document.getElementById('wheelModal').classList.add('hidden'); }
-  }
-}
-// repaint the wheel section whenever the home grids repaint
-(function(){ const _rhg = renderHomeGrids; renderHomeGrids = function(){ const r = _rhg.apply(this, arguments); try{ renderWheelSection(); }catch(e){} return r; }; })();
-try{ renderWheelSection(); }catch(e){}
-</script>
-
-
-<style>
-#wheelViewport .wheel-card{ flex:0 0 124px; width:124px; border-radius:12px; border:2px solid #16358c; background:#081433; padding:6px; text-align:center; }
-#wheelViewport .wheel-card img{ width:100%; height:84px; object-fit:cover; border-radius:8px; }
-#wheelViewport .wheel-card span{ display:block; font-size:11px; color:#e6ebf9; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-#wheelViewport .wheel-card.win{ border-color:#4a78f0; box-shadow:0 0 18px 4px rgba(74,120,240,.7); }
-</style>
-<div id="wheelModal" class="hidden fixed inset-0 z-[95] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
-  <div class="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl border border-plasma-500/40 bg-ink-900 p-4 sm:p-6 relative">
-    <button onclick="closeWheel()" class="absolute top-3 right-3 text-mist-400 hover:text-mist-100"><i class="fa-solid fa-xmark text-lg"></i></button>
-    <h3 class="font-display font-700 text-xl text-mist-100">🎡 ວົງລໍສິນຄ້າ</h3>
-    <p class="text-sm text-mist-300 mt-1">ລາຄາຫມຸນ: <b id="wheelModalPrice" class="text-ion-400"></b></p>
-    <div id="wheelViewport" class="relative overflow-hidden rounded-xl border border-ink-700 mt-4" style="height:140px;background:#070f29">
-      <div id="wheelStrip" style="display:flex;gap:10px;position:absolute;top:10px;left:0;will-change:transform"></div>
-      <div style="position:absolute;left:0;top:0;bottom:0;width:48px;background:linear-gradient(90deg,#070f29,transparent);pointer-events:none"></div>
-      <div style="position:absolute;right:0;top:0;bottom:0;width:48px;background:linear-gradient(270deg,#070f29,transparent);pointer-events:none"></div>
-      <div style="position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#2c5ad2;box-shadow:0 0 12px 3px rgba(44,90,210,.85);pointer-events:none"></div>
-    </div>
-    <button id="wheelSpinBtn" onclick="wheelSpin()" class="w-full mt-4 py-3 rounded-lg bg-plasma-500 hover:bg-plasma-600 text-white font-display font-600"></button>
-    <div id="wheelOddsWrap" class="hidden">
-    <p class="text-xs text-mist-400 mt-4 mb-2">ສິນຄ້າໃນວົງລໍ ແລະ ໂອກາດໄດ້ຮັບ (ຄິດຈາກສິນຄ້າທີ່ມີຢູ່ຕອນນີ້)</p>
-    <div id="wheelOdds" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
-    </div>
-  </div>
-</div>
 
 
 
@@ -4298,6 +4039,8 @@ window.SlipCheck = (function(){
   // skel=true (ໃຊ້ກັບຊື່ຜູ້ໂອນເທົ່ານັ້ນ): ຖ້າຊື່ ຫຼື ສະລິບ ເປັນພາສາລາວ ແລະປຽບທຽບກົງໆບໍ່ຜ່ານ ໃຫ້ລອງປຽບທຽບແບບຖອດສຽງ
   function bestSim(needle, hay, skel){
     var base = bestSimN(needle, hay);
+    var nn0 = normName(needle);   // ບາງທະນາຄານສະແດງ "TO ຊື່" ບາງທະນາຄານສະແດງແຕ່ "ຊື່" → ລອງຕັດ TO ໜ້າສຸດອອກນຳ
+    if(base < 0.8 && /^TO[A-Z\u0E80-\u0EFF]/.test(nn0) && nn0.length >= 7) base = Math.max(base, bestSimN(nn0.slice(2), hay) * 0.97);
     if(!skel || base >= 0.72) return base;
     var nl = LAO_RE.test(String(needle||'')), hl = LAO_RE.test(String(hay||'').slice(0,3000));
     if(!nl && !hl) return base;
@@ -4316,7 +4059,8 @@ window.SlipCheck = (function(){
       else if(/^\d{4,9}$/.test(tok)){ val = parseInt(tok,10); }
       if(val == null || isNaN(val)) continue;
       var ctx = text.slice(Math.max(0,m.index-18), m.index+tok.length+18);
-      out.push({ value: val, fmt: fmt, near: /(lak|kip|thb|baht|amount|ຈຳນວນ|ກີບ|ບາດ|₭|ມູນຄ່າ|ຍອດ|total)/i.test(ctx) });
+      var pre = text.slice(Math.max(0,m.index-26), m.index).split(/\r?\n/).pop();
+      out.push({ value: val, fmt: fmt, near: /(lak|kip|thb|baht|amount|ຈຳນວນ|ກີບ|ບາດ|₭|ມູນຄ່າ|ຍອດ|total)/i.test(ctx), bal: /(ຄົງເຫຼືອ|ຍອດຄົງ|balance|ຄ່າທຳນຽມ|ທຳນຽມ|\bfee\b|charge)/i.test(pre) });
     }
     return out;
   }
@@ -4355,17 +4099,34 @@ window.SlipCheck = (function(){
     return d >= 6 || (tok.length >= 10 && d >= 3 && l >= 2);
   }
   // ຄືນລາຍການ token ອ້າງອີງທັງໝົດ (ເລກໃບບິນ, Ticket, Ref ...) ຍາວສຸດກ່ອນ
+  // ກວດລະອຽດ: ຮອງຮັບ ref ມີຈຸດ/ຂີດ (MP261007.0649.B59576), ຕັດເລກບັນຊີ/ເບີໂທ/ເລກທີ່ປິດ xxxx/ວັນທີ ອອກ
+  var DATE_PFX = /^20[2-3]\d(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{4,}$/;
+  var ACCT_LINE = /(LAK|KIP|ກີບ|ACCOUNT|ບັນຊີ|A\/C)/i;
+  function refCandidate(tok, strong, line){
+    var c = tok.replace(/[.\-_]/g,'');
+    if(/X{3,}/.test(c) || tok.indexOf('*') >= 0) return '';
+    var hasSep = /[.\-_]/.test(tok), hasLetter = /[A-Z]/.test(c);
+    if(hasSep && !hasLetter) return '';                                   // 2026-10-27, 200-12-... ບໍ່ແມ່ນ ref
+    if(!hasLetter){                                                       // ເລກລ້ວນ: ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍວັນທີ ຫຼື (ມີປ້າຍ ref + ບໍ່ແມ່ນແຖວບັນຊີ)
+      if(/^(856|020|030|021)\d{7,10}$/.test(c)) return '';               // ເບີໂທ/ເບີ Umoney
+      if(!DATE_PFX.test(c) && !(strong && c.length >= 10 && c.length <= 20 && !ACCT_LINE.test(line||''))) return '';
+    }
+    return isRefToken(c) ? c : '';
+  }
   function extractRefs(text){
-    var lines = normDigits(text).split(/\r?\n/), found = {};
-    function add(t){ if(isRefToken(t)) found[t] = 1; }
+    var lines = normDigits(text).split(/\r?\n/), found = {}, TOK = /[A-Z0-9][A-Z0-9.\-_]{6,}[A-Z0-9]/g;
+    function scan(seg, strong){
+      var u = seg.toUpperCase(), m;
+      while((m = TOK.exec(u))){ var c = refCandidate(m[0], strong, seg); if(c) found[c] = 1; }
+    }
     for(var i=0;i<lines.length;i++){
       var mm = REF_KW.exec(lines[i]); if(!mm) continue;
-      var seg = lines[i].slice(mm.index) + ' ' + (lines[i+1]||'');
-      (seg.toUpperCase().match(/[A-Z0-9]{8,}/g) || []).forEach(add);
+      scan(lines[i].slice(mm.index), true);
+      if(lines[i+1]) scan(lines[i+1], true);
     }
     if(!Object.keys(found).length){
-      // ສຳຮອງ: ເລກຍາວ/ລະຫັດຜະສົມ ທີ່ບໍ່ມີປ້າຍກຳກັບ (ເລກບັນຊີມັກຖືກປິດດ້ວຍ x ແລະ ມີຂີດ/ຍະຫວ່າງ)
-      (normDigits(text).toUpperCase().match(/[A-Z0-9]{10,}/g) || []).forEach(function(t){ if(/^\d{12,}$/.test(t) || (/\d/.test(t) && /[A-Z]/.test(t))) add(t); });
+      // ສຳຮອງ: ລະຫັດຜະສົມ/ເລກຂຶ້ນຕົ້ນດ້ວຍວັນທີ ທີ່ບໍ່ມີປ້າຍກຳກັບ
+      lines.forEach(function(l){ scan(l, false); });
     }
     return Object.keys(found).sort(function(a,b){ return b.length - a.length; });
   }
@@ -5186,12 +4947,14 @@ window.SlipCheck = (function(){
     var R={ ok:false, reasons:[], info:{}, checks:{} };
     if(raw.replace(/\s/g,'').length<30){ R.reasons.push('ສະລິບບໍ່ຊັດ ລະບົບອ່ານບໍ່ໄດ້'); return R; }
     var T=a2(raw), i;
-    // 1) ຈຳນວນເງິນຕ້ອງຕົງກັບທີ່ເລືອກ
+    // 1) ຈຳນວນເງິນຕ້ອງຕົງກັບທີ່ເລືອກພໍດີ — ຖ້າສະລິບມີຍອດໃຫຍ່ກວ່າທີ່ເລືອກ (ເຊັ່ນ ປັບຈຳນວນ / ເລືອກ ₭1,000 ແຕ່ສະລິບ ₭150,000 ມີຄ່າທຳນຽມ ₭1,000) = ບໍ່ອະນຸມັດ
     var am=SC.parseAmounts(T);
-    R.checks.amount = am.some(function(x){ return x.value===ctx.amount; });
+    var money=am.filter(function(x){ return (x.fmt||x.near)&&x.value>=1000&&!x.bal; });
+    var topAmt=money.reduce(function(mx,x){ return Math.max(mx,x.value); },0);
+    var hitAmt=am.some(function(x){ return x.value===ctx.amount; });
+    R.checks.amount = hitAmt && !(topAmt>ctx.amount);
     if(!R.checks.amount){
-      var money=am.filter(function(x){ return (x.fmt||x.near)&&x.value>=1000; });
-      if(money.length){ money.sort(function(x,y){ return (y.near-x.near)||(y.value-x.value); }); R.reasons.push('ຈຳນວນເງິນໃນສະລິບ (₭'+fmtK(money[0].value)+') ບໍ່ຕົງກັບທີ່ເລືອກ (₭'+fmtK(ctx.amount)+')'); }
+      if(topAmt && topAmt!==ctx.amount) R.reasons.push('ຈຳນວນເງິນໃນສະລິບ (₭'+fmtK(topAmt)+') ບໍ່ຕົງກັບທີ່ເລືອກ (₭'+fmtK(ctx.amount)+')');
       else R.reasons.push('ອ່ານຈຳນວນເງິນຈາກສະລິບບໍ່ໄດ້');
     }
     // 2) ວັນທີຕ້ອງເປັນມື້ນີ້ (ຫຼືມື້ທີ່ເປີດ QR ຖ້າຂ້າມທ່ຽງຄືນ) — ສະລິບມື້ວານບໍ່ຮັບ
@@ -5219,21 +4982,24 @@ window.SlipCheck = (function(){
     R.checks.ref=refs.length>0;
     if(!refs.length){ R.reasons.push('ອ່ານເລກອ້າງອີງ/ເລກໃບບິນຈາກສະລິບບໍ່ໄດ້'); R.info.slipKeys=[]; }
     else{
-      R.info.ref=refs[0]; R.info.refs=refs;
+      R.info.ref=refs[0]; R.info.refs=refs; R.info.slipRefs=refs;
       R.info.slipKeys = slipTime ? refs.map(function(r){ return r+'|'+slipTime+'|'+ctx.amount; }) : [];
     }
     // 4) ຊື່ຜູ້ຮັບ: ຕ້ອງຢູ່ຝັ່ງ "ຫາບັນຊີ" (ຜູ້ຮັບ) ເທົ່ານັ້ນ — ຖ້າຊື່ຮ້ານຢູ່ຝັ່ງ "ຈາກບັນຊີ" (ຮ້ານເປັນຜູ້ໂອນອອກ) ບໍ່ຮັບ
-    var sec=sections(raw), names=c.names||[], rBest=0, rName='', fBest=0;
+    // ຊື່ທີ່ແອັດມິນຕັ້ງ (receiverName + receiverAliases) ຕ້ອງເຫັນຢູ່ໃນສະລິບ — ບໍ່ວ່າທະນາຄານໃດ (BCEL/Umoney/TRUST/OnePay/ອື່ນໆ)
+    // ແຍກຝັ່ງໄດ້ຊັດ → ກວດວ່າຊື່ບໍ່ໄດ້ຢູ່ຝັ່ງຜູ້ໂອນເທົ່ານັ້ນ; ແຍກຝັ່ງບໍ່ໄດ້ (ສະລິບແບບໃໝ່) → ພຽງແຕ່ເຫັນຊື່ກໍພໍ
+    var sec=sections(raw), names=c.names||[], rBest=0, rName='', fBest=0, aBest=0;
     names.forEach(function(n){
-      var sr=sec.to?SC.bestSim(n,sec.to):0, sf=sec.from?SC.bestSim(n,sec.from):0;
+      var sr=sec.to?SC.bestSim(n,sec.to):0, sf=sec.from?SC.bestSim(n,sec.from):0, sa=SC.bestSim(n,raw);
+      if(sa>aBest){ aBest=sa; if(!rName) rName=n; }
       if(sr>rBest){ rBest=sr; rName=n; } if(sf>fBest) fBest=sf;
     });
-    R.info.receiverSim=Math.round(rBest*100);
-    if(!sec.to){ R.checks.receiver=false; R.reasons.push('ອ່ານຝັ່ງຜູ້ຮັບ (ຫາບັນຊີ) ຈາກສະລິບບໍ່ໄດ້'); }
-    else if(rBest>=0.8 && !(fBest>rBest+0.05 && fBest>=0.8)){ R.checks.receiver=true; R.info.receiver=rName; }
+    var seen=Math.max(rBest,aBest);
+    R.info.receiverSim=Math.round(seen*100);
+    if(seen>=0.8 && !(fBest>=0.8 && fBest>rBest+0.05 && sec.to && rBest<0.8)){ R.checks.receiver=true; R.info.receiver=rName; }
     else{
       R.checks.receiver=false;
-      R.reasons.push(fBest>=0.8 ? 'ບັນຊີຮ້ານຢູ່ຝັ່ງຜູ້ໂອນ (ຈາກບັນຊີ) ບໍ່ແມ່ນຜູ້ຮັບ — ບໍ່ແມ່ນການໂອນເຂົ້າຮ້ານ' : 'ຊື່ຜູ້ຮັບໃນສະລິບບໍ່ຕົງກັບບັນຊີຮ້ານ');
+      R.reasons.push(fBest>=0.8 ? 'ບັນຊີຮ້ານຢູ່ຝັ່ງຜູ້ໂອນ (ຈາກບັນຊີ) ບໍ່ແມ່ນຜູ້ຮັບ — ບໍ່ແມ່ນການໂອນເຂົ້າຮ້ານ' : 'ບໍ່ເຫັນຊື່ຜູ້ຮັບ "'+(names[0]||'')+'" ໃນສະລິບ');
     }
     // ຊື່ຜູ້ໂອນ: ອ່ານເກັບໄວ້ໃຫ້ແອັດມິນເບິ່ງ
     R.info.sender=SC.extractSender(raw)||'';
@@ -5279,6 +5045,15 @@ window.SlipCheck = (function(){
     try{ checkStatus(); }catch(e){}
   }
 
+  /* ເລກອ້າງອີງດຽວກັນ = ສະລິບດຽວກັນ (ຍອມໃຫ້ OCR ອ່ານຜິດ 1 ຕົວໃນ ref ຍາວ ≥12 ຕົວ) */
+  function sameRef(a,b){
+    a=String(a||'').toUpperCase().replace(/[^A-Z0-9]/g,''); b=String(b||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(a.length<10 || b.length<10) return false;
+    if(a===b) return true;
+    if(a.length!==b.length || a.length<12) return false;
+    var d=0; for(var i=0;i<a.length;i++){ if(a.charAt(i)!==b.charAt(i) && ++d>1) return false; }
+    return true;
+  }
   async function autoVerify(t, ctx){
     var tools=window._slipTools, user=ctx.user, id=t.id, text=null, failed=false;
     try{
@@ -5293,16 +5068,17 @@ window.SlipCheck = (function(){
       claimed=null; finalReasons=res.reasons.slice();
       var x=arr.find(function(y){ return y.id===id; });
       if(!x || x.status!=='pending_verification') return false;           // ແອັດມິນຈັດການໄປແລ້ວ
-      var ok=res.ok, mine=res.info.slipKeys||[];
+      var ok=res.ok, mine=res.info.slipKeys||[], myRefs=res.info.slipRefs||[];
       if(ok){                                                              // ກັນສະລິບຊ້ຳ (ເລກອ້າງອີງ+ເວລາ+ຈຳນວນ ຫຼື ຮູບດຽວກັນ)
         var dup=arr.some(function(o){
           if(o.id===id || o.status==='rejected') return false;
           var th=o.slipKeys||[];
-          return mine.some(function(k){ return th.indexOf(k)>=0; }) || (ctx.hash && o.slipHash===ctx.hash);
+          var theirRefs=(o.slipRefs||[]).concat(th.map(function(k){ return String(k).split('|')[0]; }));
+          return mine.some(function(k){ return th.indexOf(k)>=0; }) || (ctx.hash && o.slipHash===ctx.hash) || myRefs.some(function(r){ return theirRefs.some(function(q){ return sameRef(r,q); }); });
         });
         if(dup){ ok=false; finalReasons.push('ສະລິບ/ເລກອ້າງອີງນີ້ເຄີຍຖືກໃຊ້ແລ້ວ (ຊ້ຳ)'); }
       }
-      x.autoChecking=false; x.autoChecks=res.checks||{}; x.slipHash=ctx.hash||null; x.slipKeys=mine;
+      x.autoChecking=false; x.autoChecks=res.checks||{}; x.slipHash=ctx.hash||null; x.slipKeys=mine; x.slipRefs=myRefs;
       x.slipRef=res.info.ref||''; x.slipDate=res.info.slipDate||''; x.transferTime=res.info.slipTime||'';
       x.senderName=res.info.sender||''; x.slipReceiver=res.info.receiver||''; x.receiverSim=res.info.receiverSim||0;
       if(ok){
@@ -5839,7 +5615,7 @@ html,body{-webkit-tap-highlight-color:transparent}
       try{ renderLatestOrders(); }catch(e){}
       try{ renderRecentPurchases(); }catch(e){}
       try{ _paintHeroStats(null); }catch(e){}
-    }, 800);
+    }, 120);
   }
   function listenDoc(key){
     if(listened[key]) return; listened[key] = true;
@@ -5869,7 +5645,7 @@ html,body{-webkit-tap-highlight-color:transparent}
       }
     }).catch(function(){});
   }
-  setTimeout(start, 1200);
+  setTimeout(start, 100);
   window.addEventListener('hashchange', function(){ if(isAdmin()) start(); });
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) light(); });
 })();
@@ -5917,7 +5693,7 @@ html, body{ touch-action:manipulation; }
 <script>
 /* ເຄື່ອງທີ່ຖືກເດັ່ງອອກແລ້ວ ຈະຊື້/ເຕີມເງິນ/ແລກໂຄດ/ໝູນວົງລໍ້ ບໍ່ໄດ້ — ກວດກັບເຊີເວີກ່ອນທຸກຄັ້ງ */
 (function(){
-  ['buyNow','submitTopup','pxrTpCreate','redeemCode','wheelSpin'].forEach(function(n){
+  ['buyNow','submitTopup','pxrTpCreate'].forEach(function(n){
     var f = window[n]; if(typeof f !== 'function' || f.__sg) return;
     var g = async function(){ if(!(await verifySession())) return; return f.apply(this, arguments); };
     g.__sg = true; window[n] = g;
@@ -5988,6 +5764,96 @@ html{ overscroll-behavior-y:none; }
     var m = document.getElementById('productModal');
     if(window._liveDeferred && m && m.classList.contains('hidden')){ window._liveDeferred = 0; try{ _liveRerender(); }catch(e){} }
   });
+})();
+</script>
+
+<!-- ===== ໂຕທີ່ລອຍ (ເມນູຂ້າງ, ປຸ່ມແຊັດ, ຫົວເວັບ, ປຸ່ມ pill, ແຖບຊື້) ໃຫ້ເລື່ອນຕາມໜ້າ — ຫິມະ/ພື້ນຫຼັງ/ປ໊ອບອັບ ບໍ່ແຕະ ===== -->
+<style id="pxrScrollFloat">
+html body #pxrSideNav{ position:absolute !important; }
+html body #pxrFab{ position:fixed !important; right:16px !important; top:auto !important; margin:0 !important; bottom:calc(8px + env(safe-area-inset-bottom,0px)) !important; }
+html body #pxrFabMenu{ bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important; }
+html body.pf-on .pf-pill, html body.tp-on #tpPill{ position:absolute !important; }
+html body .pdp-bar{ position:relative !important; bottom:auto !important; }
+</style>
+<style id="pxrSmoothScroll">
+/* ເລື່ອນລຶ່ນຂຶ້ນ: ເອົາ blur ທີ່ໜັກອອກ (ຫົວເວັບບໍ່ລອຍແລ້ວ ບໍ່ຕ້ອງ blur; ປ້າຍໃນບັດສິນຄ້າຫຼາຍໃບ) — ໜ້າຕາບໍ່ປ່ຽນ */
+html body .pcard .rarity-tag{ -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+/* ກັນໜ້າເວັບຂະຍັບຊ້າຍ-ຂວາເວລາແຕະ/ລາກນິ້ວ: ຕັດສ່ວນທີ່ລົ້ນຈໍແນວນອນ (clip ບໍ່ທຳລາຍ sticky) */
+html, body{ overflow-x:clip; overscroll-behavior-x:none; max-width:100%; }
+</style>
+
+<script id="pxrFast">
+/* ===== ດຶງຂໍ້ມູນໄວສຸດ: ຟັງສົດທັນທີ (ບໍ່ລໍຖ້າ) + ເກັບແຄຊເລກຜູ້ໃຊ້ງານໄວ້ສະແດງທັນທີຕອນເປີດເວັບ ===== */
+(function(){
+  var CK = 'vp_pub_users_cache';
+  function paintUsers(c){
+    if(c == null) return;
+    var el = document.getElementById('cardStatUsers');
+    if(el && el.textContent !== String(c)) el.textContent = c;
+  }
+  /* 1) ສະແດງຈຳນວນຜູ້ໃຊ້ງານທີ່ເຄີຍເຫັນຄັ້ງກ່ອນ ທັນທີ (ບໍ່ຕ້ອງລໍເຄືອຂ່າຍ) */
+  try{ var c0 = localStorage.getItem(CK); if(c0 !== null) paintUsers(c0); }catch(e){}
+  /* ຄຸມ _paintHeroStats ບໍ່ໃຫ້ຂຽນທັບເລກຜູ້ໃຊ້ງານດ້ວຍ 0 */
+  var _ph = window._paintHeroStats;
+  if(typeof _ph === 'function'){ window._paintHeroStats = function(n){ var r = _ph.apply(this, arguments); try{ var c = localStorage.getItem(CK); if(n == null && c !== null) paintUsers(c); }catch(e){} return r; }; }
+
+  var started = false;
+  function isAdmin(){ return typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'admin'; }
+  function go(){
+    if(started) return; started = true;
+    /* 2) ຈຳນວນຜູ້ໃຊ້ງານ: ຟັງສົດ ແລະ ຈື່ໄວ້ */
+    fbDb.collection('shopData').doc('publicStats').onSnapshot(function(d){
+      var c = d.exists && d.data() && d.data().users;
+      if(c == null) return;
+      try{ localStorage.setItem(CK, String(c)); }catch(e){}
+      if(!isAdmin()) paintUsers(c);
+    }, function(e){ started = false; console.warn('stats live failed', e); });
+    /* 3) ລາຍການສັ່ງຊື້ລ່າສຸດ: ຟັງສົດ (ເດີມດຶງທຸກ 45 ວິ) */
+    fbDb.collection('shopData').doc('recentOrders').onSnapshot(function(d){
+      var it = d.exists && d.data() && d.data().items;
+      if(!Array.isArray(it)) return;
+      try{ _loPub = it; _loPubAt = Date.now(); renderLatestOrders(); }catch(e){}
+    }, function(e){ console.warn('recent live failed', e); });
+  }
+  function boot(){
+    if(typeof BACKEND_ENABLED === 'undefined' || !BACKEND_ENABLED) return;
+    var p = (typeof waitForAuthReady === 'function') ? waitForAuthReady(900) : Promise.resolve();
+    Promise.resolve(p).then(function(){ return _ensureAuth(); }).then(go).catch(function(){ setTimeout(boot, 1500); });
+  }
+  boot();
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && !started) boot(); });
+})();
+</script>
+
+<!-- ===== FIX: ກັນໜ້າເວັບຂະຍັບຊ້າຍ-ຂວາເວລາແຕະ/ລາກນິ້ວ (iPhone Safari / CodePen) ===== -->
+<style id="noSideSway">
+html, body{ touch-action:pan-y pinch-zoom !important; overscroll-behavior-x:none !important; overscroll-behavior-y:none; }
+html{ width:100%; max-width:100%; overflow-x:hidden !important; position:relative; }
+body{ width:100%; max-width:100%; position:relative; overflow-x:hidden !important; }
+#recentBuySec .rb-track, .pdp-thumbs, .overflow-x-auto{ touch-action:pan-x pan-y !important; }
+</style>
+<script id="noSideSwayJs">
+(function(){
+  function snap(){ if(window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft){
+    window.scrollTo(0, window.scrollY); document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0; } }
+  window.addEventListener('scroll', snap, {passive:true});
+  window.addEventListener('touchend', snap, {passive:true});
+  window.addEventListener('touchcancel', snap, {passive:true});
+  var sx=0, sy=0, inH=false;
+  function inHScroller(el){
+    while(el && el !== document.body && el.nodeType===1){
+      var cs = getComputedStyle(el);
+      if((cs.overflowX==='auto' || cs.overflowX==='scroll') && el.scrollWidth > el.clientWidth+1) return true;
+      el = el.parentNode;
+    }
+    return false;
+  }
+  document.addEventListener('touchstart', function(e){ var t=e.touches[0]; sx=t.clientX; sy=t.clientY; inH = inHScroller(e.target); }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(inH || e.touches.length>1) return;
+    var t=e.touches[0];
+    if(Math.abs(t.clientX-sx) > Math.abs(t.clientY-sy) && e.cancelable) e.preventDefault();
+  }, {passive:false});
 })();
 </script>
 </body>
