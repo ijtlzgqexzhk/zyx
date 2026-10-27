@@ -1080,7 +1080,7 @@ body.auth-open #view-home{ display:block !important; }
         <button type="button" id="auTabReg" class="au-tab" onclick="switchAuth('register')">ສະໝັກສະມາຊິກ</button>
       </div>
       <div id="auth-login" class="tab-panel active"><div class="au-f"><label for="loginId">ຊື່ຜູ້ໃຊ້ ຫຼື ເບີໂທ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="loginId" type="text" placeholder="ຊື່ຜູ້ໃຊ້ ຫຼື 20xxxxxxxx" autocomplete="username" oninput="loginErrClear()" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()"></div></div><div class="au-f"><label for="loginPass">ລະຫັດຜ່ານ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input id="loginPass" type="password" placeholder="ລະຫັດຜ່ານ" autocomplete="current-password" oninput="loginErrClear()" onkeydown="if(event.key==='Enter')doLogin()"><button type="button" class="au-eye" tabindex="-1" aria-label="show/hide" onclick="auEye('loginPass',this)"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div><div id="loginErr" class="au-err" role="alert"></div><button type="button" class="au-btn" onclick="doLogin()"><span>ເຂົ້າສູ່ລະບົບ</span><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button><p class="au-foot">ຍັງບໍ່ມີບັນຊີ? <button type="button" onclick="switchAuth('register')">ສະໝັກສະມາຊິກ</button></p></div>
-      <div id="auth-register" class="tab-panel"><div class="au-f"><label for="regUsername">ຊື່ຜູ້ໃຊ້</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="regUsername" type="text" placeholder="ຊື່ຜູ້ໃຊ້" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" pattern="[A-Za-z0-9_]+" oninput="checkUsernameAvailability()"></div><p id="regUsernameHint" class="au-hint"></p></div><div class="au-f"><label for="regPhone">ເບີໂທ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><input id="regPhone" type="tel" placeholder="20xxxxxxxx" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="20[0-9]{8}" oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"></div></div><div class="au-f"><label for="regPass">ລະຫັດຜ່ານ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input id="regPass" type="password" placeholder="ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ" autocomplete="new-password" minlength="6" oninput="checkPassLen()"><button type="button" class="au-eye" tabindex="-1" aria-label="show/hide" onclick="auEye('regPass',this)"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><p id="regPassHint" class="au-hint"></p></div><div class="au-f"><label for="regPass2">ຢືນຢັນລະຫັດຜ່ານ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input id="regPass2" type="password" placeholder="ຢືນຢັນລະຫັດຜ່ານ" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"><button type="button" class="au-eye" tabindex="-1" aria-label="show/hide" onclick="auEye('regPass2',this)"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div><button type="button" class="au-btn" onclick="doRegister()"><span>ສ້າງບັນຊີ</span><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button></div>
+      <div id="auth-register" class="tab-panel"><div class="au-f"><label for="regUsername">ຊື່ຜູ້ໃຊ້</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="regUsername" type="text" placeholder="ຊື່ຜູ້ໃຊ້" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" pattern="[A-Za-z0-9_]+" oninput="checkUsernameAvailability()"></div><p id="regUsernameHint" class="au-hint"></p></div><div class="au-f"><label for="regPhone">ເບີໂທ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><input id="regPhone" type="tel" placeholder="20xxxxxxxx" inputmode="numeric" autocomplete="tel-national" oninput="regPhoneInput(this)"></div><p id="regPhoneHint" class="au-hint"></p></div><div class="au-f"><label for="regPass">ລະຫັດຜ່ານ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input id="regPass" type="password" placeholder="ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ" autocomplete="new-password" minlength="6" oninput="checkPassLen()"><button type="button" class="au-eye" tabindex="-1" aria-label="show/hide" onclick="auEye('regPass',this)"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><p id="regPassHint" class="au-hint"></p></div><div class="au-f"><label for="regPass2">ຢືນຢັນລະຫັດຜ່ານ</label><div class="au-in"><svg class="au-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input id="regPass2" type="password" placeholder="ຢືນຢັນລະຫັດຜ່ານ" autocomplete="new-password" oninput="regErrClear()" onkeydown="if(event.key==='Enter')doRegister()"><button type="button" class="au-eye" tabindex="-1" aria-label="show/hide" onclick="auEye('regPass2',this)"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div><div id="regErr" class="au-err" role="alert"></div><button type="button" class="au-btn" onclick="doRegister()"><span>ສ້າງບັນຊີ</span><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button></div>
     </div>
   </div>
 </section>
@@ -1938,14 +1938,15 @@ function log(action, detail){
 const api = {
   async register({username,phone,password}){
     const users = loadDB(DB_KEYS.users, []);
-    if(users.some(u=>u.username.toLowerCase()===username.toLowerCase())) throw new Error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ');
+    if(users.some(u=>u && u.username && String(u.username).toLowerCase()===username.toLowerCase())) throw new Error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ');
     const _k8 = String(phone).replace(/\D/g,'').slice(-8);   // same number typed as 020xxxxxxxx / 20xxxxxxxx / 85620xxxxxxxx
-    if(users.some(u=>u.phone && String(u.phone).replace(/\D/g,'').slice(-8)===_k8)) throw new Error('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ');
+    if(users.some(u=>u && u.phone && String(u.phone).replace(/\D/g,'').slice(-8)===_k8)) throw new Error('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ');
     try{
       await _ensureAuth();
       const _pi = await fbDb.collection('phoneIndex').doc(_k8).get();
       if(_pi.exists) throw new Error('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ');
     }catch(e){ if(e && e.message && e.message.indexOf('ເບີໂທນີ້ສະໝັກແລ້ວ')===0) throw e; }
+    try{ if(await _remoteUsernameTaken(username)===true) throw new Error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ'); }catch(e){ if(e && e.message==='ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ') throw e; }
     const email = phoneToEmail(phone);
     let cred;
     try{
@@ -1961,6 +1962,7 @@ const api = {
     users.push(user); saveDB(DB_KEYS.users, users);
     await syncUserToFirestore(user, {withBalance:true});
     try{ await fbDb.collection('phoneIndex').doc(_k8).set({ uid: cred.user.uid, createdAt: nowISO() }); }catch(e){ console.warn('phoneIndex write failed', e); }
+    try{ await fbDb.collection('phoneIndex').doc('u_'+String(username).toLowerCase()).set({ uid: cred.user.uid, createdAt: nowISO() }); }catch(e){ console.warn('username index write failed', e); }
     try{ fbDb.collection('shopData').doc('publicStats').set({ users: firebase.firestore.FieldValue.increment(1), updatedAt: nowISO() }, { merge:true }).catch(()=>{}); }catch(e){}
     log('REGISTER', `New user: ${username}`);
     return { token: 'jwt.'+uid('tok'), user };
@@ -3091,40 +3093,127 @@ function checkPassLen(){
   if(v.length<6){ h.textContent='ລະຫັດຜ່ານຕ້ອງຢ່າງນ້ອຍ 6 ຕົວຂຶ້ນໄປ (ຕອນນີ້ '+v.length+' ຕົວ)'; h.className='au-hint bad'; }
   else { h.textContent='✓ ລະຫັດຜ່ານໃຊ້ໄດ້'; h.className='au-hint ok'; }
 }
-function checkUsernameAvailability(){
-  const hint = document.getElementById('regUsernameHint'); if(!hint) return;
-  const username = document.getElementById('regUsername').value.trim();
-  if(!username){ hint.textContent = ''; hint.className = 'au-hint'; return; }
-  if(!/^[A-Za-z0-9_]+$/.test(username)){ hint.textContent = 'ໃຊ້ໄດ້ສະເພາະ A-Z, a-z, 0-9 ແລະ _ ເທົ່ານັ້ນ'; hint.className = 'au-hint bad'; return; }
-  const users = loadDB(DB_KEYS.users, []);
-  const taken = users.some(u=>u.username && u.username.toLowerCase()===username.toLowerCase());
-  if(taken){ hint.textContent = '✕ ຊື່ຜູ້ໃຊ້ນີ້ຖືກໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ'; hint.className = 'au-hint bad'; }
-  else { hint.textContent = '✓ ຊື່ຜູ້ໃຊ້ນີ້ໃຊ້ໄດ້'; hint.className = 'au-hint ok'; }
+// ===== ກວດຊື່ຜູ້ໃຊ້/ເບີໂທຊ້ຳແບບທັນທີ (ກວດທັງໃນເຄື່ອງ ແລະ ເທິງເຊີເວີ — ລູກຄ້າຄົນອື່ນທີ່ສະໝັກຈາກເຄື່ອງອື່ນກໍ່ຖືກກວດ) =====
+const _regChk = { u:0, p:0, uTaken:false, pTaken:false, uOk:false, pOk:false };
+function _regMark(inputId, state){   // state: 'bad' | 'ok' | ''
+  const el = document.getElementById(inputId); const box = el && el.closest('.au-in'); if(!box) return;
+  box.classList.toggle('err', state==='bad');
 }
-async function doRegister(){
-  const username = document.getElementById('regUsername').value.trim();
-  const phone = String(document.getElementById('regPhone').value||'').replace(/\D/g,'');
-  const password = document.getElementById('regPass').value;
-  const password2 = (document.getElementById('regPass2')||{}).value;
-  if(!username||!phone||!password||!password2) return toastErr('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ');
-  const usernameRegex = /^[A-Za-z0-9_]+$/;
-  if(!usernameRegex.test(username)) return toastErr('ຊື່ຜູ້ໃຊ້ຕ້ອງເປັນພາສາອັງກິດເທົ່ານັ້ນ (A-Z, a-z, 0-9, _)');
-  if(!/^20\d{8}$/.test(phone)) return toastErr('ເບີໂທຕ້ອງເປັນ 20xxxxxxxx (ຕົວເລກ 10 ໂຕ ເລີ່ມດ້ວຍ 20)');
-  const usersCheck = loadDB(DB_KEYS.users, []);
-  if(usersCheck.some(u=>u.username.toLowerCase()===username.toLowerCase())) return toastErr('ຊື່ຜູ້ໃຊ້ນີ້ຖືກໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ');
-  if(password.length<6) return toastErr('ລະຫັດຜ່ານຕ້ອງຢ່າງນ້ອຍ 6 ຕົວຂຶ້ນໄປ');
-  if(password!==password2) return toastErr('ລະຫັດຜ່ານບໍ່ກົງກັນ');
+function _normRegPhone(v){            // 020xxxxxxxx / 85620xxxxxxxx / +856 20 xx → 20xxxxxxxx
+  let d = String(v||'').replace(/\D/g,'');
+  if(d.indexOf('856')===0) d = d.slice(3);
+  if(d.charAt(0)==='0') d = d.replace(/^0+/,'');
+  return d.slice(0,10);
+}
+async function _remoteIndexHas(docId){   // true = ມີແລ້ວ, false = ບໍ່ມີ, null = ກວດບໍ່ໄດ້ (ເນັດ/ສິດ)
+  if(!BACKEND_ENABLED) return null;
   try{
+    try{ await _ensureAuth(); }catch(e){}
+    const d = await fbDb.collection('phoneIndex').doc(docId).get();
+    return !!d.exists;
+  }catch(e){ return null; }
+}
+async function _remoteUsernameTaken(name){
+  const key = 'u_' + String(name).toLowerCase();
+  const r = await _remoteIndexHas(key);
+  if(r===true) return true;
+  // ບັນຊີເກົ່າທີ່ຍັງບໍ່ມີ index → ລອງຄົ້ນໃນ users ໂດຍກົງ (ຖ້າສິດບໍ່ອະນຸຍາດ ຈະຂ້າມໄປ)
+  try{
+    const q = await fbDb.collection('users').where('username','==',name).limit(1).get();
+    if(!q.empty) return true;
+  }catch(e){}
+  return r===null ? null : false;
+}
+function _setHint(id, text, cls){ const h=document.getElementById(id); if(!h) return; h.textContent=text; h.className='au-hint'+(cls?(' '+cls):''); }
+let _uTimer=null, _pTimer=null;
+function checkUsernameAvailability(){
+  const input = document.getElementById('regUsername'); if(!input) return;
+  const username = input.value.trim();
+  const seq = ++_regChk.u; _regChk.uTaken=false; _regChk.uOk=false; clearTimeout(_uTimer);
+  try{ regErrClear(); }catch(e){}
+  if(!username){ _setHint('regUsernameHint',''); _regMark('regUsername',''); return; }
+  if(!/^[A-Za-z0-9_]+$/.test(username)){ _setHint('regUsernameHint','ໃຊ້ໄດ້ສະເພາະ A-Z, a-z, 0-9 ແລະ _ ເທົ່ານັ້ນ','bad'); _regMark('regUsername','bad'); return; }
+  const users = loadDB(DB_KEYS.users, []);
+  if(users.some(u=>u && u.username && String(u.username).toLowerCase()===username.toLowerCase())){
+    _regChk.uTaken=true; _setHint('regUsernameHint','✕ ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ','bad'); _regMark('regUsername','bad'); return;
+  }
+  _setHint('regUsernameHint','ກຳລັງກວດຊື່...',''); _regMark('regUsername','');
+  _uTimer = setTimeout(async ()=>{
+    const taken = await _remoteUsernameTaken(username);
+    if(seq!==_regChk.u) return;       // ລູກຄ້າພິມຕໍ່ແລ້ວ → ຜົນເກົ່າບໍ່ໃຊ້
+    if(taken===true){ _regChk.uTaken=true; _setHint('regUsernameHint','✕ ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ','bad'); _regMark('regUsername','bad'); }
+    else { _regChk.uOk=true; _setHint('regUsernameHint','✓ ຊື່ຜູ້ໃຊ້ນີ້ໃຊ້ໄດ້','ok'); _regMark('regUsername',''); }
+  }, 450);
+}
+function regPhoneInput(el){
+  const raw = el.value;
+  el.value = _normRegPhone(raw);
+  try{ regErrClear(); }catch(e){}
+  const phone = el.value; const seq = ++_regChk.p; _regChk.pTaken=false; _regChk.pOk=false; clearTimeout(_pTimer);
+  if(!phone){ _setHint('regPhoneHint',''); _regMark('regPhone',''); return; }
+  if(phone.length<10 || !/^20\d{8}$/.test(phone)){
+    if(phone.length>=2 && phone.slice(0,2)!=='20'){ _setHint('regPhoneHint','ເບີໂທຕ້ອງເລີ່ມດ້ວຍ 20 (ເຊັ່ນ 20xxxxxxxx)','bad'); _regMark('regPhone','bad'); }
+    else { _setHint('regPhoneHint','ປ້ອນໃຫ້ຄົບ 10 ໂຕ (ຕອນນີ້ '+phone.length+' ໂຕ)',''); _regMark('regPhone',''); }
+    return;
+  }
+  const k8 = phone.slice(-8);
+  const users = loadDB(DB_KEYS.users, []);
+  if(users.some(u=>u && u.phone && String(u.phone).replace(/\D/g,'').slice(-8)===k8)){
+    _regChk.pTaken=true; _setHint('regPhoneHint','✕ ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ ຫຼື ໃຊ້ເບີອື່ນ','bad'); _regMark('regPhone','bad'); return;
+  }
+  _setHint('regPhoneHint','ກຳລັງກວດເບີໂທ...',''); _regMark('regPhone','');
+  _pTimer = setTimeout(async ()=>{
+    const has = await _remoteIndexHas(k8);
+    if(seq!==_regChk.p) return;
+    if(has===true){ _regChk.pTaken=true; _setHint('regPhoneHint','✕ ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ ຫຼື ໃຊ້ເບີອື່ນ','bad'); _regMark('regPhone','bad'); }
+    else { _regChk.pOk=true; _setHint('regPhoneHint','✓ ເບີໂທນີ້ໃຊ້ໄດ້','ok'); _regMark('regPhone',''); }
+  }, 450);
+}
+function regErrClear(){
+  const b=document.getElementById('regErr'); if(b){ b.classList.remove('show'); b.textContent=''; }
+}
+function regErr(msg){
+  const b=document.getElementById('regErr');
+  if(b){ b.textContent = '⚠ ' + msg; b.classList.add('show'); try{ b.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(e){} }
+  try{ toastErr(msg); }catch(e){}
+}
+let _regBusy = false;
+async function doRegister(){
+  if(_regBusy) return;                       // ກັນກົດຊ້ຳ (ກົດ 2 ເທື່ອ → ບັນຊີຖືກສ້າງແລ້ວ ແຕ່ຂຶ້ນວ່າ "ສະໝັກແລ້ວ")
+  regErrClear();
+  const btn = document.querySelector('#auth-register .au-btn');
+  const btnTxt = btn ? btn.querySelector('span') : null;
+  const setBusy = (b)=>{ _regBusy = b; if(btn){ btn.disabled = b; btn.style.opacity = b ? '.65' : ''; } if(btnTxt) btnTxt.textContent = b ? 'ກຳລັງສ້າງບັນຊີ...' : 'ສ້າງບັນຊີ'; };
+  try{
+    const username = (document.getElementById('regUsername').value||'').trim();
+    const phone = _normRegPhone(document.getElementById('regPhone').value);
+    const password = document.getElementById('regPass').value;
+    const password2 = (document.getElementById('regPass2')||{}).value;
+    if(!username||!phone||!password||!password2) return regErr('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ');
+    if(!/^[A-Za-z0-9_]+$/.test(username)) return regErr('ຊື່ຜູ້ໃຊ້ຕ້ອງເປັນພາສາອັງກິດເທົ່ານັ້ນ (A-Z, a-z, 0-9, _)');
+    if(!/^20\d{8}$/.test(phone)) return regErr('ເບີໂທຕ້ອງເປັນ 20xxxxxxxx (ຕົວເລກ 10 ໂຕ ເລີ່ມດ້ວຍ 20)');
+    const usersCheck = loadDB(DB_KEYS.users, []);
+    if(usersCheck.some(u=>u && u.username && String(u.username).toLowerCase()===username.toLowerCase())) return regErr('ຊື່ຜູ້ໃຊ້ນີ້ຖືກໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ');
+    if(password.length<6) return regErr('ລະຫັດຜ່ານຕ້ອງຢ່າງນ້ອຍ 6 ຕົວຂຶ້ນໄປ');
+    if(password!==password2) return regErr('ລະຫັດຜ່ານບໍ່ກົງກັນ');
+    setBusy(true);
+    if(await _remoteUsernameTaken(username)===true){ _regChk.uTaken=true; _setHint('regUsernameHint','✕ ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ','bad'); _regMark('regUsername','bad'); return regErr('ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ'); }
+    if(await _remoteIndexHas(phone.slice(-8))===true){ _regChk.pTaken=true; _setHint('regPhoneHint','✕ ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ ຫຼື ໃຊ້ເບີອື່ນ','bad'); _regMark('regPhone','bad'); return regErr('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ'); }
     const {user} = await api.register({username,phone,password});
     const _tok = uid('ses');
-    const _claimed = await claimSession(user.id, _tok);
-    if(BACKEND_ENABLED && !_claimed){ try{ fbAuth.signOut(); }catch(e){} throw new Error('ເຂົ້າລະບົບບໍ່ສຳເລັດ, ກະລຸນາກວດອິນເຕີເນັດແລ້ວລອງໃໝ່'); }
+    let _claimed = false;
+    try{ _claimed = await claimSession(user.id, _tok); }catch(e){}
+    // ບັນຊີຖືກສ້າງສຳເລັດແລ້ວ — ຖ້າຈອງ token ບໍ່ໄດ້ຊົ່ວຄາວ ກໍ່ບໍ່ຕ້ອງໃຫ້ລູກຄ້າສະໝັກໃໝ່ (ລະບົບຈະຈອງໃຫ້ອັດຕະໂນມັດພາຍຫຼັງ)
     SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ window.__vpStampOnLogin(); }catch(e){} try{ startOwnUserLive(); }catch(e){}
-    renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats();
-    renderAuthArea(); toastOk('ສະໝັກສະມາຊິກສຳເລັດ!'); go('home');
+    try{ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); }catch(e){}
+    try{ renderAuthArea(); }catch(e){}
+    toastOk('ສະໝັກສະມາຊິກສຳເລັດ!'); go('home');
     // refresh shop data in the background — no need to make the customer wait
     pullAdminDataFromFirestore().then(ch=>{ if(ch){ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); } }).catch(()=>{});
-  }catch(e){ toastErr(e.message); }
+  }catch(e){
+    console.error('register failed', e);
+    regErr(e && e.message ? e.message : 'ສະໝັກສະມາຊິກບໍ່ສຳເລັດ, ກະລຸນາລອງໃໝ່');
+  }finally{ setBusy(false); }
 }
 function doForgot(){
   const idv = document.getElementById('forgotEmail').value.trim();
@@ -5942,8 +6031,11 @@ html, body{ overflow-x:clip; overscroll-behavior-x:none; max-width:100%; }
 <!-- ===== FIX: ກັນໜ້າເວັບຂະຍັບຊ້າຍ-ຂວາເວລາແຕະ/ລາກນິ້ວ (iPhone Safari / CodePen) ===== -->
 <style id="noSideSway">
 html, body{ touch-action:pan-y pinch-zoom !important; overscroll-behavior-x:none !important; overscroll-behavior-y:none; }
-html{ width:100%; max-width:100%; overflow-x:hidden !important; position:relative; }
-body{ width:100%; max-width:100%; position:relative; overflow-x:hidden !important; }
+html{ width:100%; max-width:100%; }
+body{ width:100%; max-width:100%; position:relative; }
+/* ໝາຍເຫດ: ຫ້າມໃສ່ overflow-x:hidden ໃຫ້ທັງ html ແລະ body ພ້ອມກັນ — ເຮັດໃຫ້ iPhone/ເບົາເຊີໃນແອັບ (Messenger/LINE/Facebook) ເລື່ອນຂຶ້ນລົງບໍ່ໄດ້ ແຕ່ຍັງກົດໄດ້ */
+@supports (overflow:clip){ html, body{ overflow-x:clip !important; } }
+@supports not (overflow:clip){ body{ overflow-x:hidden !important; } }
 #recentBuySec .rb-track, .pdp-thumbs, .overflow-x-auto{ touch-action:pan-x pan-y !important; }
 </style>
 <script id="noSideSwayJs">
@@ -5968,6 +6060,46 @@ body{ width:100%; max-width:100%; position:relative; overflow-x:hidden !importan
     var t=e.touches[0];
     if(Math.abs(t.clientX-sx) > Math.abs(t.clientY-sy) && e.cancelable) e.preventDefault();
   }, {passive:false});
+})();
+</script>
+
+<!-- ===== FIX: ລູກຄ້າເລື່ອນໜ້າຂຶ້ນ-ລົງບໍ່ໄດ້ (ກົດໄດ້ແຕ່ເລື່ອນບໍ່ໄດ້) — ປົດລັອກເລື່ອນອັດຕະໂນມັດຖ້າບໍ່ມີປ໊ອບອັບເປີດຢູ່ ===== -->
+<script id="scrollUnlockGuard">
+(function(){
+  function visible(el){ return !!el && !el.classList.contains('hidden') && el.style.display!=='none' && getComputedStyle(el).display!=='none'; }
+  function overlayOpen(){
+    try{
+      var wp = document.getElementById('welcomePopup'); if(wp && wp.classList.contains('show')) return true;
+      var pm = document.getElementById('productModal'); if(pm && pm.classList.contains('pdp-on') && visible(pm)) return true;
+      var tg = document.getElementById('topupGuideOverlay'); if(tg && tg.style.display==='block') return true;
+      if(document.body.classList.contains('auth-open')) return true;
+      if(window.Swal && Swal.isVisible && Swal.isVisible()){
+        var pop = document.querySelector('.swal2-popup');
+        if(pop && !pop.classList.contains('swal2-toast')) return true;
+      }
+    }catch(e){ return true; }   // ສົງໄສ → ບໍ່ແຕະຕ້ອງ
+    return false;
+  }
+  function unlock(){
+    try{
+      if(overlayOpen()) return;
+      var b = document.body, h = document.documentElement;
+      if(b.style.overflow || b.style.overflowY || h.style.overflow || h.style.overflowY){
+        b.style.overflow=''; b.style.overflowY=''; h.style.overflow=''; h.style.overflowY='';
+      }
+      ['swal2-shown','swal2-height-auto','swal2-no-backdrop'].forEach(function(c){ b.classList.remove(c); h.classList.remove(c); });
+      if(b.style.paddingRight) b.style.paddingRight='';
+      if(b.style.position==='fixed' && !b.classList.contains('auth-open')){ b.style.position=''; b.style.top=''; }
+    }catch(e){}
+  }
+  var last=0;
+  function soon(){ var n=Date.now(); if(n-last<400) return; last=n; unlock(); }
+  window.addEventListener('touchstart', soon, {passive:true, capture:true});
+  window.addEventListener('pageshow', unlock);
+  window.addEventListener('hashchange', function(){ setTimeout(unlock, 300); });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) unlock(); });
+  setInterval(unlock, 2000);
+  setTimeout(unlock, 1500);
 })();
 </script>
 </body>
