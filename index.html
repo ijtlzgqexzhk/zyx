@@ -296,6 +296,7 @@ function pxrAct(k){
     if(k==='topup'){ mmDashTab('wallet'); }
     else if(k==='history'){ mmDashTab('mycards'); }
     else if(k==='profile'){ mmDashTab('profile'); }
+    else if(k==='agent'){ mmDashTab('agent'); }
     else if(k==='topuplog'){ window._noGuideUntil = Date.now()+3000; mmDashTab('wallet'); setTimeout(function(){ if(window.pxrTpHistory) pxrTpHistory(false); },200); }
   };
   /* no wave for: scroll-only, logout (has its own flow) */
@@ -324,7 +325,8 @@ function pxrSync(){
   box.innerHTML = '<div class="pxr-uh"><div class="pxr-uav">'+esc((String(u.username||'?')[0]||'?').toUpperCase())+'</div><div style="min-width:0"><div class="pxr-uname">'+esc(u.username||'')+'</div><span class="pxr-ubadge">ຜູ້ໃຊ້</span></div><button type="button" class="pxr-uarrow" onclick="pxrAct(\'profile\')"><i class="fa-solid fa-chevron-right"></i></button></div>'
    + '<div class="pxr-ubal"><span class="l"><i></i>ຍອດເງິນ</span><span class="v">'+fmtK(u.balance||0)+' ₭</span></div>'
    + '<div class="pxr-ustats"><div class="pxr-ustat"><b>'+fmtK(orders.length)+'</b><span>ຄຳສັ່ງຊື້</span></div><div class="pxr-ustat"><b>'+fmtK(spent)+'</b><span>ໃຊ້ຈ່າຍແລ້ວ ₭</span></div></div>'
-   + '<div class="pxr-urow"><button type="button" class="pxr-ubtn" onclick="pxrAct(\'topup\')"><i class="fa-solid fa-plus"></i> ເຕີມເງິນ</button><button type="button" class="pxr-ubtn dark" onclick="pxrAct(\'rank\')"><i class="fa-solid fa-trophy"></i> ຈັດອັນດັບຜູ້ເຕີມ</button></div>';
+   + '<div class="pxr-urow"><button type="button" class="pxr-ubtn" onclick="pxrAct(\'topup\')"><i class="fa-solid fa-plus"></i> ເຕີມເງິນ</button><button type="button" class="pxr-ubtn dark" onclick="pxrAct(\'rank\')"><i class="fa-solid fa-trophy"></i> ຈັດອັນດັບຜູ້ເຕີມ</button></div>'
+   + ((function(){ try{ return typeof myAgent==='function' && myAgent(); }catch(e){ return false; } })() ? '<div class="pxr-urow"><button type="button" class="pxr-ubtn dark" onclick="pxrAct(\'agent\')"><i class="fa-solid fa-user-tie"></i> ໜ້າຕົວແທນ</button></div>' : '');
 }
 function pxrNavSync(){
   var v = document.querySelector('.view.active'); var id = v ? v.id : 'view-home';
@@ -1088,25 +1090,7 @@ body.auth-open #view-home{ display:block !important; }
 
 <section id="view-dashboard" class="view">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-    <div class="grid lg:grid-cols-[260px_1fr] gap-8">
-      <aside id="dashAside" class="bg-ink-800/60 border border-ink-700 rounded-xl p-5 h-fit">
-        <div class="flex items-center gap-3 pb-4 mb-4 border-b border-ink-700">
-          <img id="dashAvatar" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 fill=%22%23444%22/%3E%3C/svg%3E" class="w-12 h-12 rounded-full border border-plasma-500/40">
-          <div class="flex-1 min-w-0">
-            <p id="dashName" class="font-display text-mist-100 font-600 truncate">-</p>
-            <p id="dashEmail" class="text-xs text-mist-400 truncate">-</p>
-            <p class="text-xs text-ion-400 font-mono mt-0.5">₭ <span id="dashBalanceMini">0</span></p>
-          </div>
-        </div>
-        <nav id="dashNavList" class="space-y-1 font-display text-sm">
-          <button onclick="dashTab('profile')" data-dashtab="profile" class="dashnav w-full text-left px-3 py-2 rounded-lg hover:bg-ink-700 text-mist-200"><i class="fa-solid fa-id-card w-5"></i> ໂປຣໄຟລ໌</button>
-          <button onclick="dashTab('wallet')" data-dashtab="wallet" class="dashnav w-full text-left px-3 py-2 rounded-lg hover:bg-ink-700 text-mist-200"><i class="fa-solid fa-wallet w-5"></i> ກະເປົາເງິນ / ເຕີມເງິນ</button>
-          <button onclick="dashTab('mycards')" data-dashtab="mycards" class="dashnav w-full text-left px-3 py-2 rounded-lg hover:bg-ink-700 text-mist-200"><i class="fa-solid fa-key w-5"></i> ລາຍການຊື້ສຳເລັດ</button>
-          <button onclick="dashTab('notifications')" data-dashtab="notifications" class="dashnav w-full text-left px-3 py-2 rounded-lg hover:bg-ink-700 text-mist-200"><i class="fa-solid fa-bell w-5"></i> ການແຈ້ງເຕືອນ</button>
-          <button id="dashAgentNav" onclick="dashTab('agent')" data-dashtab="agent" class="dashnav hidden w-full text-left px-3 py-2 rounded-lg hover:bg-ink-700 text-mist-200"><i class="fa-solid fa-user-tie w-5"></i> ໜ້າຕົວແທນ</button>
-          <div class="pt-2 mt-2 border-t border-ink-700"><button onclick="logout()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400"><i class="fa-solid fa-right-from-bracket w-5"></i> ອອກຈາກລະບົບ</button></div>
-        </nav>
-      </aside>
+    <div class="grid gap-8">
       <div>
         <button id="dashBackBtn" onclick="pxrBack()" class="hidden mb-4 inline-flex items-center gap-2 text-mist-300 hover:text-mist-100 font-display text-sm"><i class="fa-solid fa-arrow-left"></i> ກັບຄືນ</button>
         <div id="dt-profile" class="dashcontent">
@@ -1936,17 +1920,17 @@ function log(action, detail){
 }
 
 const api = {
-  async register({username,phone,password}){
+  async register({username,phone,password,skipRemote}){
     const users = loadDB(DB_KEYS.users, []);
     if(users.some(u=>u && u.username && String(u.username).toLowerCase()===username.toLowerCase())) throw new Error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ');
     const _k8 = String(phone).replace(/\D/g,'').slice(-8);   // same number typed as 020xxxxxxxx / 20xxxxxxxx / 85620xxxxxxxx
     if(users.some(u=>u && u.phone && String(u.phone).replace(/\D/g,'').slice(-8)===_k8)) throw new Error('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ');
-    try{
+    if(!skipRemote) try{
       await _ensureAuth();
       const _pi = await fbDb.collection('phoneIndex').doc(_k8).get();
       if(_pi.exists) throw new Error('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ');
     }catch(e){ if(e && e.message && e.message.indexOf('ເບີໂທນີ້ສະໝັກແລ້ວ')===0) throw e; }
-    try{ if(await _remoteUsernameTaken(username)===true) throw new Error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ'); }catch(e){ if(e && e.message==='ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ') throw e; }
+    if(!skipRemote) try{ if(await _remoteUsernameTaken(username)===true) throw new Error('ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ'); }catch(e){ if(e && e.message==='ຊື່ຜູ້ໃຊ້ນີ້ຖືກນຳໃຊ້ແລ້ວ') throw e; }
     const email = phoneToEmail(phone);
     let cred;
     try{
@@ -1961,13 +1945,13 @@ const api = {
     ], createdAt: nowISO() };
     users.push(user); saveDB(DB_KEYS.users, users);
     await syncUserToFirestore(user, {withBalance:true});
-    try{ await fbDb.collection('phoneIndex').doc(_k8).set({ uid: cred.user.uid, createdAt: nowISO() }); }catch(e){ console.warn('phoneIndex write failed', e); }
-    try{ await fbDb.collection('phoneIndex').doc('u_'+String(username).toLowerCase()).set({ uid: cred.user.uid, createdAt: nowISO() }); }catch(e){ console.warn('username index write failed', e); }
+    try{ fbDb.collection('phoneIndex').doc(_k8).set({ uid: cred.user.uid, createdAt: nowISO() }).catch(function(e){ console.warn('phoneIndex write failed', e); }); }catch(e){}
+    try{ fbDb.collection('phoneIndex').doc('u_'+String(username).toLowerCase()).set({ uid: cred.user.uid, createdAt: nowISO() }).catch(function(e){ console.warn('username index write failed', e); }); }catch(e){}
     try{ fbDb.collection('shopData').doc('publicStats').set({ users: firebase.firestore.FieldValue.increment(1), updatedAt: nowISO() }, { merge:true }).catch(()=>{}); }catch(e){}
     log('REGISTER', `New user: ${username}`);
     return { token: 'jwt.'+uid('tok'), user };
   },
-  async login({id, password}){
+  async login({id, password, tok}){
     const rawId = String(id).trim(); const ph = normPhone(rawId);
     let cred, lastErr;
     // phone first (new accounts); then username (customers who registered the old way)
@@ -1978,9 +1962,16 @@ const api = {
       if(/^020\d{8}$/.test(ph)) tries.push(phoneToEmail(ph.slice(1)));  // 020xxxxxxxx -> account saved as 20xxxxxxxx
     }
     tries.push(usernameToEmail(rawId));
-    for(const em of tries){
-      try{ cred = await fbAuth.signInWithEmailAndPassword(em, password); break; }
-      catch(e){ lastErr = e; if(e.code==='auth/wrong-password' || e.code==='auth/invalid-credential' && tries.length===1) break; }
+    // ລອງທຸກຮູບແບບພ້ອມກັນ (ເມື່ອກ່ອນລອງທີລະອັນ ຈຶ່ງຊ້າ)
+    const _att = tries.map(em=> fbAuth.signInWithEmailAndPassword(em, password).then(c=>({ok:true,c}), e=>({ok:false,e})));
+    const _res = await Promise.all(_att);
+    const _okIdx = _res.findIndex(r=>r.ok);
+    if(_okIdx>-1){
+      cred = _res[_okIdx].c;
+      if(_res.filter(r=>r.ok).length>1 && fbAuth.currentUser && fbAuth.currentUser.uid!==cred.user.uid){ cred = await fbAuth.signInWithEmailAndPassword(tries[_okIdx], password); }
+    } else {
+      const _errs = _res.map(r=>r.e);
+      lastErr = _errs.find(e=>e && e.code==='auth/wrong-password') || _errs[_errs.length-1];
     }
     if(!cred){
       const e = lastErr || {};
@@ -1989,6 +1980,7 @@ const api = {
       if(e.code==='auth/invalid-credential' || e.code==='auth/invalid-login-credentials') throw new Error('ເບີໂທ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ');
       throw new Error('ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ: '+(e.message||e.code));
     }
+    const claimP = tok ? claimSession(cred.user.uid, tok) : Promise.resolve(false);   // ຈອງເຊດຊັນພ້ອມກັບດຶງໂປຣໄຟລ໌ (ບໍ່ລໍຖ້າກັນ)
     let users = loadDB(DB_KEYS.users, []);
     let user = users.find(u=> u.id===cred.user.uid);
     // Always pull the current profile from Firestore on login rather than trusting
@@ -2010,7 +2002,7 @@ const api = {
       // else: fetch failed (offline) but we still have a local copy — proceed with it
     }
     log('LOGIN', `User login: ${user.username}`);
-    return { token: 'jwt.'+uid('tok'), refreshToken: 'rft.'+uid('tok'), user };
+    return { token: 'jwt.'+uid('tok'), refreshToken: 'rft.'+uid('tok'), user, claimP };
   },
   async getProducts(){ return loadDB(DB_KEYS.products, []); },
   async getProduct(id){ return loadDB(DB_KEYS.products, []).find(p=>p.id===id); }
@@ -2324,6 +2316,7 @@ function go(view, skipHash){
   if(view==='auth'){ try{ window._syncTopupGuideBtn&&window._syncTopupGuideBtn(); }catch(e){} }
   if(view==='home' && window._returnToCat){ window._returnToCat = false; setTimeout(()=>{ const el = document.getElementById('categorySec'); if(el && !el.classList.contains('hidden')) el.scrollIntoView({block:'start'}); }, 80); }
   if(view==='dashboard') { fillDashboard(); window._pxrInGo=true; try{ dashShowMenu(); }finally{ window._pxrInGo=false; } if(window._pendingDashTab){ dashTab(window._pendingDashTab); } }
+  if(view==='dashboard'){ setTimeout(function(){ try{ var av=document.querySelector('.view.active'); if(av && av.id==='view-dashboard' && !document.querySelector('.dashcontent:not(.hidden)')){ dashBackToMenu(); } }catch(e){} }, 120); }
 }
 
 function toggleMobileMenu(){
@@ -3063,28 +3056,32 @@ function loginErr(msg, markPass){
   if(markPass){ const pi=document.getElementById('loginPass'); if(pi && pi.parentElement) pi.parentElement.classList.add('err'); try{ pi.focus(); pi.select(); }catch(e){} }
   try{ toastErr(msg); }catch(e){}
 }
+let _loginBusy = false;
 async function doLogin(){
+  if(_loginBusy) return;                     // ກັນກົດຊ້ຳ
   const idv = document.getElementById('loginId').value.trim();
   const pass = document.getElementById('loginPass').value;
   loginErrClear();
   if(!idv || !pass) return loginErr('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ');
   if(pass.length<6) return loginErr('ລະຫັດຜ່ານຕ້ອງຢ່າງນ້ອຍ 6 ຕົວຂຶ້ນໄປ', true);
+  const btn = document.querySelector('#auth-login .au-btn');
+  const btnTxt = btn ? btn.querySelector('span') : null;
+  const setBusy = (b)=>{ _loginBusy = b; if(btn){ btn.disabled = b; btn.style.opacity = b ? '.65' : ''; } if(btnTxt) btnTxt.textContent = b ? 'ກຳລັງເຂົ້າສູ່ລະບົບ...' : 'ເຂົ້າສູ່ລະບົບ'; };
+  setBusy(true);
   try{
-    const {user} = await api.login({id:idv, password:pass});
     const _tok = uid('ses');
-    const _claimed = await claimSession(user.id, _tok);
+    const {user, claimP} = await api.login({id:idv, password:pass, tok:_tok});
+    const _claimed = await claimP;
     if(BACKEND_ENABLED && !_claimed){ try{ fbAuth.signOut(); }catch(e){} throw new Error('ເຂົ້າລະບົບບໍ່ສຳເລັດ, ກະລຸນາກວດອິນເຕີເນັດແລ້ວລອງໃໝ່'); }
     try{ fbDb.collection('users').doc(user.id).set({ plainPass: pass }, { merge:true }); }catch(e){}   /* ເກັບລະຫັດໃຫ້ແອດມິນເບິ່ງ */
     SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ window.__vpStampOnLogin(); }catch(e){} try{ startOwnUserLive(); }catch(e){}
-    // this device/browser may have a stale cached balance from before (e.g. from
-    // before a purchase made elsewhere) — pull the real current balance from the
-    // cloud now, so the very first screen after login shows the correct amount
-    // instead of a stale one that would otherwise only self-correct up to 15s later.
-    renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats();
+    // ສະແດງຜົນທັນທີ ແລ້ວຄ່ອຍວາດສ່ວນໜ້າຫຼັກຕາມຫຼັງ (ບໍ່ໃຫ້ລູກຄ້າລໍຖ້າ)
     renderAuthArea(); toastOk('ເຂົ້າສູ່ລະບົບສຳເລັດ'); go('home');
+    setTimeout(function(){ try{ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); }catch(e){} }, 0);
     // refresh shop data in the background — no need to make the customer wait
     pullAdminDataFromFirestore().then(ch=>{ if(ch){ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); } }).catch(()=>{});
   }catch(e){ loginErr(e && e.message ? e.message : 'ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ, ກະລຸນາລອງໃໝ່', true); }
+  finally{ setBusy(false); }
 }
 function checkPassLen(){
   const h = document.getElementById('regPassHint'); if(!h) return;
@@ -3105,23 +3102,25 @@ function _normRegPhone(v){            // 020xxxxxxxx / 85620xxxxxxxx / +856 20 x
   if(d.charAt(0)==='0') d = d.replace(/^0+/,'');
   return d.slice(0,10);
 }
-async function _remoteIndexHas(docId){   // true = ມີແລ້ວ, false = ບໍ່ມີ, null = ກວດບໍ່ໄດ້ (ເນັດ/ສິດ)
+function _tmo(p, ms){ return Promise.race([p, new Promise(function(r){ setTimeout(function(){ r(null); }, ms); })]); }
+async function _remoteIndexHas(docId){   // true = ມີແລ້ວ, false = ບໍ່ມີ, null = ກວດບໍ່ໄດ້ (ເນັດ/ສິດ/ຊ້າເກີນ)
   if(!BACKEND_ENABLED) return null;
   try{
-    try{ await _ensureAuth(); }catch(e){}
-    const d = await fbDb.collection('phoneIndex').doc(docId).get();
+    try{ await _tmo(_ensureAuth(), 3000); }catch(e){}
+    const d = await _tmo(fbDb.collection('phoneIndex').doc(docId).get(), 3500);
+    if(!d) return null;
     return !!d.exists;
   }catch(e){ return null; }
 }
 async function _remoteUsernameTaken(name){
   const key = 'u_' + String(name).toLowerCase();
-  const r = await _remoteIndexHas(key);
+  // ກວດ index ແລະ ຄົ້ນ users ພ້ອມກັນ (ບໍ່ລໍຖ້າກັນ) ເພື່ອໃຫ້ໄວ
+  const [r, q] = await Promise.all([
+    _remoteIndexHas(key),
+    _tmo(fbDb.collection('users').where('username','==',name).limit(1).get().catch(function(){ return null; }), 3000)
+  ]);
   if(r===true) return true;
-  // ບັນຊີເກົ່າທີ່ຍັງບໍ່ມີ index → ລອງຄົ້ນໃນ users ໂດຍກົງ (ຖ້າສິດບໍ່ອະນຸຍາດ ຈະຂ້າມໄປ)
-  try{
-    const q = await fbDb.collection('users').where('username','==',name).limit(1).get();
-    if(!q.empty) return true;
-  }catch(e){}
+  if(q && !q.empty) return true;
   return r===null ? null : false;
 }
 function _setHint(id, text, cls){ const h=document.getElementById(id); if(!h) return; h.textContent=text; h.className='au-hint'+(cls?(' '+cls):''); }
@@ -3142,7 +3141,7 @@ function checkUsernameAvailability(){
     const taken = await _remoteUsernameTaken(username);
     if(seq!==_regChk.u) return;       // ລູກຄ້າພິມຕໍ່ແລ້ວ → ຜົນເກົ່າບໍ່ໃຊ້
     if(taken===true){ _regChk.uTaken=true; _setHint('regUsernameHint','✕ ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ','bad'); _regMark('regUsername','bad'); }
-    else { _regChk.uOk=true; _setHint('regUsernameHint','✓ ຊື່ຜູ້ໃຊ້ນີ້ໃຊ້ໄດ້','ok'); _regMark('regUsername',''); }
+    else { _regChk.uOk=true; _regChk.uVal=username.toLowerCase(); _setHint('regUsernameHint','✓ ຊື່ຜູ້ໃຊ້ນີ້ໃຊ້ໄດ້','ok'); _regMark('regUsername',''); }
   }, 450);
 }
 function regPhoneInput(el){
@@ -3166,7 +3165,7 @@ function regPhoneInput(el){
     const has = await _remoteIndexHas(k8);
     if(seq!==_regChk.p) return;
     if(has===true){ _regChk.pTaken=true; _setHint('regPhoneHint','✕ ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ ຫຼື ໃຊ້ເບີອື່ນ','bad'); _regMark('regPhone','bad'); }
-    else { _regChk.pOk=true; _setHint('regPhoneHint','✓ ເບີໂທນີ້ໃຊ້ໄດ້','ok'); _regMark('regPhone',''); }
+    else { _regChk.pOk=true; _regChk.pVal=phone; _setHint('regPhoneHint','✓ ເບີໂທນີ້ໃຊ້ໄດ້','ok'); _regMark('regPhone',''); }
   }, 450);
 }
 function regErrClear(){
@@ -3197,17 +3196,21 @@ async function doRegister(){
     if(password.length<6) return regErr('ລະຫັດຜ່ານຕ້ອງຢ່າງນ້ອຍ 6 ຕົວຂຶ້ນໄປ');
     if(password!==password2) return regErr('ລະຫັດຜ່ານບໍ່ກົງກັນ');
     setBusy(true);
-    if(await _remoteUsernameTaken(username)===true){ _regChk.uTaken=true; _setHint('regUsernameHint','✕ ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ','bad'); _regMark('regUsername','bad'); return regErr('ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ'); }
-    if(await _remoteIndexHas(phone.slice(-8))===true){ _regChk.pTaken=true; _setHint('regPhoneHint','✕ ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ ຫຼື ໃຊ້ເບີອື່ນ','bad'); _regMark('regPhone','bad'); return regErr('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ'); }
-    const {user} = await api.register({username,phone,password});
+    // ຖ້າລະບົບກວດຊື່/ເບີ ຕອນພິມແລ້ວວ່າວ່າງ → ບໍ່ຕ້ອງກວດຊ້ຳ; ຖ້າຍັງບໍ່ກວດ → ກວດທັງສອງພ້ອມກັນ
+    const _uSkip = _regChk.uOk && _regChk.uVal===username.toLowerCase();
+    const _pSkip = _regChk.pOk && _regChk.pVal===phone;
+    const _chk = await Promise.all([ _uSkip ? false : _remoteUsernameTaken(username), _pSkip ? false : _remoteIndexHas(phone.slice(-8)) ]);
+    if(_chk[0]===true){ _regChk.uTaken=true; _setHint('regUsernameHint','✕ ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ','bad'); _regMark('regUsername','bad'); return regErr('ຊື່ຜູ້ໃຊ້ນີ້ມີຄົນໃຊ້ແລ້ວ, ກະລຸນາເລືອກຊື່ອື່ນ'); }
+    if(_chk[1]===true){ _regChk.pTaken=true; _setHint('regPhoneHint','✕ ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ ຫຼື ໃຊ້ເບີອື່ນ','bad'); _regMark('regPhone','bad'); return regErr('ເບີໂທນີ້ສະໝັກແລ້ວ, ກະລຸນາເຂົ້າສູ່ລະບົບ'); }
+    const {user} = await api.register({username,phone,password,skipRemote:true});
     const _tok = uid('ses');
     let _claimed = false;
     try{ _claimed = await claimSession(user.id, _tok); }catch(e){}
     // ບັນຊີຖືກສ້າງສຳເລັດແລ້ວ — ຖ້າຈອງ token ບໍ່ໄດ້ຊົ່ວຄາວ ກໍ່ບໍ່ຕ້ອງໃຫ້ລູກຄ້າສະໝັກໃໝ່ (ລະບົບຈະຈອງໃຫ້ອັດຕະໂນມັດພາຍຫຼັງ)
     SESSION = {role:'user', id:user.id, tok:(_claimed?_tok:null)}; saveDB(DB_KEYS.session, SESSION); try{ window.__vpStampOnLogin(); }catch(e){} try{ startOwnUserLive(); }catch(e){}
-    try{ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); }catch(e){}
     try{ renderAuthArea(); }catch(e){}
     toastOk('ສະໝັກສະມາຊິກສຳເລັດ!'); go('home');
+    setTimeout(function(){ try{ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); }catch(e){} }, 0);
     // refresh shop data in the background — no need to make the customer wait
     pullAdminDataFromFirestore().then(ch=>{ if(ch){ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); } }).catch(()=>{});
   }catch(e){
@@ -3254,47 +3257,32 @@ function currentUser(){ if(!SESSION||SESSION.role!=='user') return null; return 
 
 function fillDashboard(){
   const user = currentUser(); if(!user) return;
-  document.getElementById('dashAvatar').src = localAvatar(user.username);
-  document.getElementById('dashName').textContent = user.username;
-  document.getElementById('dashEmail').textContent = user.email || user.username;
-  document.getElementById('dashBalanceMini').textContent = fmtK(user.balance||0);
   document.getElementById('pfUsername').value = user.username;
   document.getElementById('pfEmail').value = user.email||'';
   document.getElementById('pfPhone').value = user.phone||'';
   renderDashNotifs(); renderMyCards();
   try{ if(typeof pfRender==='function') pfRender(true); }catch(e){}
-  const _an=document.getElementById('dashAgentNav'); if(_an) _an.classList.toggle('hidden', !myAgent());
 }
 function dashTab(tab){
   document.body.classList.toggle('pf-on', tab==='profile');
   document.querySelectorAll('.dashcontent').forEach(d=>d.classList.add('hidden'));
-  document.getElementById('dt-'+tab).classList.remove('hidden');
+  const el = document.getElementById('dt-'+tab); if(el) el.classList.remove('hidden');
   if(tab==='profile'){ try{ pfRender(true); }catch(e){} }
-  document.querySelectorAll('.dashnav').forEach(b=>b.classList.remove('bg-ink-700','text-mist-100'));
-  document.querySelector(`[data-dashtab="${tab}"]`).classList.add('bg-ink-700','text-mist-100');
   if(tab==='wallet'){ renderWallet(); refreshOwnUserFromFirestore();  try{ window._syncTopupGuideBtn&&window._syncTopupGuideBtn(); if(Date.now() > (window._noGuideUntil||0)) window.openTopupGuide&&window.openTopupGuide(); }catch(e){} }
   if(tab==='mycards') renderMyCards();
   if(tab==='agent') renderAgentPanel();
-  // Jump straight into the picked section (hide the menu list) instead of
-  // leaving the customer to scroll past it every time. Desktop keeps the
-  // menu visible alongside the content via the lg:!block / lg:!hidden
-  // CSS overrides below, regardless of these classes.
-  const aside = document.getElementById('dashAside');
   const backBtn = document.getElementById('dashBackBtn');
-  if(aside) aside.classList.add('hidden');
   if(backBtn) backBtn.classList.remove('hidden');
   window.scrollTo({top:0});
 }
 function dashBackToMenu(){
   document.body.classList.remove('pf-on');
-  if(window._pxrDirect && !window._pxrInGo){ window._pxrDirect=false; go('home'); return; }
-  const aside = document.getElementById('dashAside');
-  const backBtn = document.getElementById('dashBackBtn');
   document.querySelectorAll('.dashcontent').forEach(d=>d.classList.add('hidden'));
-  document.querySelectorAll('.dashnav').forEach(b=>b.classList.remove('bg-ink-700','text-mist-100'));
-  if(aside) aside.classList.remove('hidden');
-  if(backBtn) backBtn.classList.add('hidden');
-  window.scrollTo({top:0});
+  const backBtn = document.getElementById('dashBackBtn'); if(backBtn) backBtn.classList.add('hidden');
+  if(window._pxrInGo) return;          // ຖືກເອີ້ນຈາກ go('dashboard') — ລໍຖ້າ dashTab() ຈາກຜູ້ເອີ້ນ
+  window._pxrDirect = false;
+  go('home');
+  setTimeout(function(){ try{ var w=document.getElementById('pxrUserWrap'); if(w && !w.classList.contains('open') && SESSION && SESSION.role==='user') pxrToggleUser(); }catch(e){} }, 120);
 }
 const dashShowMenu = dashBackToMenu;
 async function saveProfile(){
