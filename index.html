@@ -5893,5 +5893,44 @@ html, body{ touch-action:manipulation; }
   });
 })();
 </script>
+
+<!-- ===== FIX: ພື້ນຫຼັງທີ່ແອັດມິນຕັ້ງ ໃຫ້ລູກຄ້າເຫັນ (ບໍ່ຖືກ CSS !important ບັງ) ===== -->
+<style id="siteBgFixCss">
+html{ background:#03040a; }
+body.has-site-bg:not(.pf-on):not(.tp-on){ background:transparent !important; background-image:none !important; }
+body.has-site-bg #app, body.has-site-bg main{ background:transparent !important; }
+body.has-site-bg #heroSection:not(.has-hero-banner){ background:transparent !important; background-image:none !important; }
+#siteBgLayer{ position:fixed; top:0; right:0; bottom:0; left:0; z-index:-1; pointer-events:none; display:none; background-size:cover; background-position:center; background-repeat:no-repeat; }
+#siteBgLayer::after{ content:''; position:absolute; top:0; right:0; bottom:0; left:0; background:linear-gradient(rgba(3,4,10,.40),rgba(3,4,10,.55)); }
+body.has-site-bg #siteBgLayer{ display:block; }
+</style>
+<script id="siteBgFixJs">
+(function(){
+  var layer = null;
+  function ensure(){
+    if(layer && layer.parentNode) return layer;
+    layer = document.getElementById('siteBgLayer');
+    if(!layer){ layer = document.createElement('div'); layer.id = 'siteBgLayer'; document.body.insertBefore(layer, document.body.firstChild); }
+    return layer;
+  }
+  window.applyBackground = function(){
+    try{
+      var st = loadDB(DB_KEYS.settings, {}) || {};
+      var img = st.bgImage || '';
+      var el = ensure();
+      document.body.style.backgroundImage = '';          // ລ້າງຄ່າເກົ່າທີ່ເຄີຍຖືກບັງ
+      if(img){
+        if(el.__src !== img){ el.style.backgroundImage = 'url("' + String(img).replace(/"/g,'%22') + '")'; el.__src = img; }
+        document.body.classList.add('has-site-bg');
+      }else{
+        el.style.backgroundImage = ''; el.__src = '';
+        document.body.classList.remove('has-site-bg');
+      }
+    }catch(e){}
+  };
+  window.applyBackground();
+  setInterval(window.applyBackground, 1500);             // ແອັດມິນປ່ຽນ → ລູກຄ້າເຫັນເອງພາຍໃນ ~2 ວິ
+})();
+</script>
 </body>
 </html>
