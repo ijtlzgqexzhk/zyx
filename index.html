@@ -31,6 +31,10 @@
 <script>window.Swal||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.8/sweetalert2.all.min.js"><\/script>')</script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>window.QRCode||document.write('<script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"><\/script>')</script>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script>window.firebase||document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"><\/script>')</script>
 <script>window.firebase||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"><\/script>')</script>
@@ -1561,17 +1565,17 @@ window.addEventListener('pagehide', _flushSyncQueue);
 let _pullInFlight = null, _lastPullAt = 0;
 // PERF: deduped + throttled (4s). Returns true if any local data actually changed,
 // so callers only re-render when needed. Pass force=true on money-critical paths.
-function pullAdminDataFromFirestore(force){
+function pullAdminDataFromFirestore(force, keys){
   if(!BACKEND_ENABLED) return Promise.resolve(false);
   if(_pullInFlight) return _pullInFlight;
-  if(!force && Date.now() - _lastPullAt < 1000) return Promise.resolve(false);   // ດຶງທຸກ 1 ວິນາທີ
+  if(!force && Date.now() - _lastPullAt < 4000) return Promise.resolve(false);
   _pullInFlight = (async()=>{
     if(_pendingSyncs.size) await Promise.all([..._pendingSyncs.values()]);
     let changed = false;
     try{
       await _ensureAuth();
       // ດຶງສະເພາະເອກະສານທີ່ຕ້ອງໃຊ້ (ບໍ່ດຶງທັງ collection — ກັນດຶງໄຟລ໌ເພງ/ຂໍ້ມູນໜັກໆ ທີ່ເຮັດໃຫ້ຊ້າ)
-      const _snaps = await Promise.all(ADMIN_SYNC_KEYS.map(k=>fbDb.collection(CLOUD_COLLECTION).doc(k).get().catch(e=>{ console.warn('pull failed for', k, e); return null; })));
+      const _snaps = await Promise.all((keys||ADMIN_SYNC_KEYS).map(k=>fbDb.collection(CLOUD_COLLECTION).doc(k).get().catch(e=>{ console.warn('pull failed for', k, e); return null; })));
       _snaps.forEach(d=>{
         if(!d || !d.exists) return;
         const key = d.id;
@@ -2125,7 +2129,8 @@ let _liveT = null;
 function _liveRerender(){
   clearTimeout(_liveT);
   _liveT = setTimeout(()=>{
-    try{ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); renderCategories(); applyAgentTheme(); }catch(e){}
+    const _pdpOpen = (()=>{ const m=document.getElementById('productModal'); return !!(m && !m.classList.contains('hidden')); })();
+    if(_pdpOpen) window._liveDeferred = 1; else try{ renderSiteBranding(); applyBackground(); renderHeroBanner(); renderMarquee(); renderHomeGrids(); updateHeroStats(); renderCategories(); applyAgentTheme(); }catch(e){}
     try{ window.musicRefresh&&window.musicRefresh(); window._syncTopupGuideBtn&&window._syncTopupGuideBtn(); }catch(e){}
     try{ if(typeof renderProductList==='function') renderProductList(); }catch(e){}
     try{ const ap=document.getElementById('dt-agent'); if(ap && !ap.classList.contains('hidden') && typeof renderAgentPanel==='function') renderAgentPanel(); }catch(e){}
@@ -2166,9 +2171,10 @@ setTimeout(_hideLoadOverlay, 1200);   // failsafe
   // ເປີດໄວ: ຜູ້ເຂົ້າຊົມທີ່ມີແຄຊຢູ່ແລ້ວ ເຫັນເວັບທັນທີ ແລ້ວ sync ຖານຂໍ້ມູນ ໃນພື້ນຫຼັງ; ຄົນໃໝ່ລໍຖ້າຂໍ້ມູນສູງສຸດ ~3.5 ວິນາທີ
   const _hadCache = (loadDB(DB_KEYS.products, []) || []).length > 0;
   const _bgSync = (async()=>{
-    await _withTimeout(waitForAuthReady(), 2500);
-    await _withTimeout(pullAdminDataFromFirestore(), 8000);
-    startLiveSync();
+    await _withTimeout(waitForAuthReady(1200), 1500);
+    await _withTimeout(_ensureAuth(), 4000);
+    startLiveSync();   // ສິນຄ້າ/ການຕັ້ງຄ່າ/ຕົວແທນ ມາທັນທີແບບ push (ບໍ່ລໍຖ້າດຶງ 7 ເອກະສານ)
+    await _withTimeout(pullAdminDataFromFirestore(true, ['admins','orders','logs','topups']), 8000);   // ສ່ວນທີ່ເຫຼືອ ດຶງຂະໜານໃນພື້ນຫຼັງ
   })();
   // ເຂົ້າເວັບທັນທີ: ບໍ່ລໍຖ້າເຄືອຂ່າຍ — ສະແດງໜ້າເວັບກ່ອນ ແລ້ວຂໍ້ມູນຈະເຕີມເອງເມື່ອ sync ສຳເລັດ (_bgSync.then → _liveRerender)
   await _withTimeout(seedIfNeeded(), 2000);
@@ -2186,7 +2192,7 @@ setTimeout(_hideLoadOverlay, 1200);   // failsafe
   _try(()=>route());
   window.addEventListener('hashchange', route);
   setTimeout(_hideLoadOverlay, Math.max(0, 1000 - Math.round(performance.now())));   // ໂລໂກ ~1 ວິນາທີ ແລ້ວເຂົ້າເວັບ
-  _bgSync.then(()=>{ try{ _liveRerender(); renderAuthArea(); }catch(e){} });
+  _bgSync.then(()=>{ try{ renderAuthArea(); renderLatestOrders(); renderRecentPurchases(); updateHeroStats(); }catch(e){} });
   window.__appReady = true; try{ var _bb=document.getElementById('bootBanner'); if(_bb) _bb.remove(); }catch(e){}
   setTimeout(()=>{ if(window.showWelcomePopup) window.showWelcomePopup(); }, 500);
   if(SESSION && SESSION.role==='user') refreshOwnUserFromFirestore();
@@ -5821,26 +5827,51 @@ html,body{-webkit-tap-highlight-color:transparent}
 </script>
 
 <script id="pxrPoll1s">
-/* ===== ດຶງຂໍ້ມູນຈາກເຊີເວີທຸກ 1 ວິນາທີ (ສິນຄ້າ, ອໍເດີ/ຂາຍແລ້ວ, ຈຳນວນຜູ້ໃຊ້, ການຕັ້ງຄ່າ) ===== */
+/* ===== ອັບເດດສົດແບບ push (onSnapshot) ແທນການດຶງທຸກ 1 ວິນາທີ =====
+   ເດີມ: get() 7 ເອກະສານ + ຈຳນວນຜູ້ໃຊ້ ທຸກ 1 ວິ ຕໍ່ລູກຄ້າ 1 ຄົນ → ເຊີເວີຊ້າ/ເຮັດໃຫ້ໜ້າກະຕຸກ.
+   ໃໝ່: ຟັງການປ່ຽນແປງ ແລະ ດາວໂຫຼດສະເພາະຕອນມີການປ່ຽນແທ້ ໆ (ແອັດມິນປ່ຽນ → ລູກຄ້າເຫັນພາຍໃນບໍ່ເຖິງ 1 ວິ) */
 (function(){
-  var busy = false;
-  async function tick(){
-    if(busy || document.hidden) return;
-    if(typeof BACKEND_ENABLED === 'undefined' || !BACKEND_ENABLED) return;
-    busy = true;
-    try{
-      var changed = await pullAdminDataFromFirestore();
-      if(changed && typeof _liveRerender === 'function') _liveRerender();
-      if(!(typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'admin')){
-        var c = await readPublicUserCount();
-        var el = document.getElementById('cardStatUsers');
-        if(c !== null && el && el.textContent !== String(c)) el.textContent = c;
-      }
-    }catch(e){}
-    busy = false;
+  var lt = null, listened = {};
+  function light(){
+    clearTimeout(lt);
+    lt = setTimeout(function(){
+      if(document.hidden) return;
+      try{ renderLatestOrders(); }catch(e){}
+      try{ renderRecentPurchases(); }catch(e){}
+      try{ _paintHeroStats(null); }catch(e){}
+    }, 800);
   }
-  setInterval(tick, 1000);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) tick(); });
+  function listenDoc(key){
+    if(listened[key]) return; listened[key] = true;
+    fbDb.collection(CLOUD_COLLECTION).doc(key).onSnapshot(function(snap){
+      if(snap.metadata && snap.metadata.hasPendingWrites) return;
+      if(_pendingSyncs.size) return;
+      var remote = snap.exists && snap.data() && snap.data().data;
+      if(remote === undefined || remote === null) return;
+      var s = JSON.stringify(remote);
+      if(localStorage.getItem(DB_KEYS[key]) !== s){ localStorage.setItem(DB_KEYS[key], s); light(); }
+    }, function(e){ listened[key] = false; console.warn('live listen failed', key, e); });
+  }
+  function isAdmin(){ return typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'admin'; }
+  function start(){
+    if(typeof BACKEND_ENABLED === 'undefined' || !BACKEND_ENABLED) return;
+    _ensureAuth().then(function(){
+      ['orders','logs','topups'].forEach(listenDoc);
+      if(isAdmin()) listenDoc('admins');
+      if(!listened.__stats){
+        listened.__stats = true;
+        fbDb.collection('shopData').doc('publicStats').onSnapshot(function(d){
+          if(isAdmin()) return;
+          var c = d.exists && d.data() && d.data().users;
+          var el = document.getElementById('cardStatUsers');
+          if(c != null && el && el.textContent !== String(c)) el.textContent = c;
+        }, function(){ listened.__stats = false; });
+      }
+    }).catch(function(){});
+  }
+  setTimeout(start, 1200);
+  window.addEventListener('hashchange', function(){ if(isAdmin()) start(); });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) light(); });
 })();
 </script>
 
@@ -5900,7 +5931,7 @@ html{ background:#03040a; }
 body.has-site-bg:not(.pf-on):not(.tp-on){ background:transparent !important; background-image:none !important; }
 body.has-site-bg #app, body.has-site-bg main{ background:transparent !important; }
 body.has-site-bg #heroSection:not(.has-hero-banner){ background:transparent !important; background-image:none !important; }
-#siteBgLayer{ position:fixed; top:0; right:0; bottom:0; left:0; z-index:-1; pointer-events:none; display:none; background-size:cover; background-position:center; background-repeat:no-repeat; }
+#siteBgLayer{ position:fixed; top:0; right:0; left:0; height:100vh; height:100lvh; transform:translate3d(0,0,0); backface-visibility:hidden; will-change:transform; contain:strict; z-index:-1; pointer-events:none; display:none; background-size:cover; background-position:center; background-repeat:no-repeat; }
 #siteBgLayer::after{ content:''; position:absolute; top:0; right:0; bottom:0; left:0; background:linear-gradient(rgba(3,4,10,.40),rgba(3,4,10,.55)); }
 body.has-site-bg #siteBgLayer{ display:block; }
 </style>
@@ -5929,7 +5960,34 @@ body.has-site-bg #siteBgLayer{ display:block; }
     }catch(e){}
   };
   window.applyBackground();
-  setInterval(window.applyBackground, 1500);             // ແອັດມິນປ່ຽນ → ລູກຄ້າເຫັນເອງພາຍໃນ ~2 ວິ
+  // (ເອົາ timer 1.5 ວິ ອອກ: ມັນ parse ຂໍ້ມູນຮູບໃຫຍ່ ໆ ຊ້ຳ ໆ ເຮັດໃຫ້ກະຕຸກ — ອັບເດດຜ່ານ _liveRerender/storage ແທນ)
+})();
+</script>
+<style id="pxrSmooth">
+/* ກັນຮູບຊູມ/ກະໂດດເອງຕອນແຕະໃນມືຖື (hover ຄ້າງ) ແລະ ກັນພື້ນຫຼັງຂະຫຍາຍເມື່ອແຖບ URL ເລື່ອນ */
+@media (hover:none), (pointer:coarse){
+  .group:hover .group-hover\:scale-105{ transform:none !important; }
+  .hover\:-translate-y-1:hover{ transform:none !important; }
+  body .pcard:hover{ box-shadow:none; }
+}
+.pcard .fit-main{ will-change:auto; }
+html{ overscroll-behavior-y:none; }
+</style>
+<script id="pxrSmoothJs">
+(function(){
+  /* ກາດຜູ້ໃຊ້/ອາວາຕາ: ຂຽນ HTML ໃໝ່ສະເພາະເມື່ອເນື້ອຫາປ່ຽນແທ້ (ເດີມຂຽນໃໝ່ທຸກ 3 ວິ → ໜ້າກະຕຸກ) */
+  var d = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  ['pxrUserCard','pxrHdrAvatar'].forEach(function(id){
+    var el = document.getElementById(id); if(!el || el.__dd) return; el.__dd = 1;
+    Object.defineProperty(el, 'innerHTML', { configurable:true,
+      get:function(){ return d.get.call(this); },
+      set:function(v){ if(this.__h === v && this.firstChild) return; this.__h = v; d.set.call(this, v); } });
+  });
+  /* ກັບມາໜ້າຫຼັກຫຼັງປິດໜ້າສິນຄ້າ → ວາດຕາມການປ່ຽນທີ່ຄ້າງໄວ້ ຄັ້ງດຽວ */
+  window.addEventListener('hashchange', function(){
+    var m = document.getElementById('productModal');
+    if(window._liveDeferred && m && m.classList.contains('hidden')){ window._liveDeferred = 0; try{ _liveRerender(); }catch(e){} }
+  });
 })();
 </script>
 </body>
