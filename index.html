@@ -4,6 +4,13 @@
 <head>
 <meta charset="UTF-8">
 <meta id="viewportMeta" name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ເປີດການເຊື່ອມຕໍ່ລ່ວງໜ້າ: ເຊີເວີຖານຂໍ້ມູນ + CDN ທີ່ຕ້ອງໃຊ້ ເພື່ອໃຫ້ໂຫຼດໄວຂຶ້ນ -->
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <title>STONE SHOP — ຮ້ານຂາຍພາແນລ Free Fire</title>
 <meta name="description" content="">
 <script>
@@ -44,12 +51,76 @@ window.SESSION_TTL_MIN = 30;   /* ← ປ່ຽນຈຳນວນນາທີຢ
   }catch(e){}
 })();
 </script>
+<script>
+/* ===== ເອັບເຟັກ "ໄລຍອດ" (ເວລາຕາມ PXR_ROLL_MS): ເລກແລ່ນສຸ່ມໄປມາ (ແມ່ນແຕ່ຍອດ 0 ກໍ່ແລ່ນ) ແລ້ວຄ່ອຍຢຸດທີ່ຍອດຈິງ ===== */
+window.PXR_ROLL_MS = 1000;   /* ເວລາໄລຍອດ (ມິລິວິນາທີ): 1000 = 1 ວິນາທີ */
+window.pxrRollNum = function(el, target, fmt, ms, hi){
+  if(!el) return;
+  target = Number(target)||0; fmt = fmt || function(n){ return String(n); }; ms = ms || window.PXR_ROLL_MS;
+  var rolling = !!(el._rollRAF && el._rollMode === 'flicker');
+  if(rolling){ el._rollTarget = target; el._rollFmt = fmt; return; }          // ກຳລັງແລ່ນຢູ່: ປ່ຽນເປົ້າໝາຍສຸດທ້າຍ ບໍ່ເລີ່ມໃໝ່
+  if(el._rollTarget === target && el.textContent === fmt(target) && el._rolled) return;   // ສະແດງຍອດນີ້ຢູ່ແລ້ວ
+  var reduce = false; try{ reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  if(el._rollRAF){ cancelAnimationFrame(el._rollRAF); el._rollRAF = 0; }
+  el._rollTarget = target; el._rollFmt = fmt;
+  if(reduce){ el._rolled = true; el._rollVal = target; el.textContent = fmt(target); return; }
+
+  if(!el._rolled){
+    // ຄັ້ງທຳອິດ: ແລ່ນເລກສຸ່ມ ~3 ວິນາທີ ແລ້ວຢຸດທີ່ຍອດຈິງ (ເຖິງຍອດຈິງເປັນ 0 ກໍ່ແລ່ນ)
+    el._rolled = true; el._rollMode = 'flicker';
+    var digits = String(Math.max(0, Math.round(target))).length;
+    var top = hi || (Math.pow(10, Math.max(2, digits + 1)) - 1);
+    var t0 = null, lastTick = 0;
+    var step = function(now){
+      if(t0 === null) t0 = now;
+      var k = (now - t0) / ms;
+      if(k >= 1){ el._rollRAF = 0; el._rollMode = ''; el._rollVal = el._rollTarget; el.textContent = el._rollFmt(el._rollTarget); return; }
+      if(now - lastTick > 70){                                  // ປ່ຽນເລກທຸກ ~70ms
+        lastTick = now;
+        var band = k > 0.8 ? Math.max(1, Math.round(top * (1 - k) / 0.2 * 0.25)) : top;   // 20% ສຸດທ້າຍ ຄ່ອຍໆເຂົ້າໃກ້ຍອດຈິງ
+        var v = k > 0.8 ? Math.max(0, el._rollTarget + Math.round((Math.random()*2-1) * band)) : Math.floor(Math.random() * (top + 1));
+        el.textContent = el._rollFmt(v);
+      }
+      el._rollRAF = requestAnimationFrame(step);
+    };
+    el._rollRAF = requestAnimationFrame(step);
+    return;
+  }
+  // ຄັ້ງຕໍ່ໄປ (ຍອດປ່ຽນ): ນັບຈາກຄ່າເກົ່າໄປຄ່າໃໝ່ແບບໄວ
+  var from = (el._rollVal == null) ? 0 : el._rollVal;
+  if(from === target){ el._rollVal = target; el.textContent = fmt(target); return; }
+  el._rollMode = 'count';
+  var c0 = null, dur = 600;
+  var cstep = function(now){
+    if(c0 === null) c0 = now;
+    var k = Math.min(1, (now - c0) / dur), e = 1 - Math.pow(1 - k, 3), v = from + (target - from) * e;
+    el._rollVal = v; el.textContent = fmt(Math.round(v));
+    if(k < 1) el._rollRAF = requestAnimationFrame(cstep);
+    else { el._rollRAF = 0; el._rollMode = ''; el._rollVal = target; el.textContent = fmt(target); }
+  };
+  el._rollRAF = requestAnimationFrame(cstep);
+};
+/* ການ໌ຜູ້ໃຊ້: ທຸກຄັ້ງທີ່ເປີດ ຍອດເງິນ/ຈຳນວນຄຳສັ່ງຊື້/ໃຊ້ຈ່າຍ ແລ່ນ 3 ວິນາທີ ແລ້ວຄ່ອຍສະແດງຍອດ */
+window.pxrRollCard = function(){
+  var box = document.getElementById('pxrUserCard'); if(!box) return;
+  var els = box.querySelectorAll('.pxr-ubal .v, .pxr-ustat b'), any = false;
+  Array.prototype.forEach.call(els, function(el){
+    var m = String(el.textContent).match(/^([\d,]+)(.*)$/); if(!m) return;
+    var target = Number(m[1].replace(/,/g,'')) || 0, suf = m[2]; any = true;
+    el._rolled = false; el._rollTarget = null; el._rollVal = null;
+    window.pxrRollNum(el, target, function(n){ return Number(n||0).toLocaleString('en-US') + suf; }, window.PXR_ROLL_MS, 99999);
+  });
+  if(any) window._pxrRollUntil = Date.now() + window.PXR_ROLL_MS + 150;   // ຢ່າໃຫ້ pxrSync ຂຽນທັບຕອນກຳລັງແລ່ນ
+};
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>window.Swal||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.8/sweetalert2.all.min.js"><\/script>')</script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script>window.QRCode||document.write('<script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"><\/script>')</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.8/sweetalert2.all.min.js"></script>
+<script>window.Swal||document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.8/dist/sweetalert2.all.min.js"><\/script>')</script>
+<script>/* QR: ໂຫຼດແບບບໍ່ບລັອກ (ໃຊ້ສະເພາະໜ້າເຕີມເງິນ) */
+(function(){ function load(u,next){ var s=document.createElement('script'); s.src=u; s.async=true; s.onerror=function(){ if(next) load(next); }; document.head.appendChild(s); }
+  load('https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js','https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'); })();</script>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
@@ -83,7 +154,7 @@ window.SESSION_TTL_MIN = 30;   /* ← ປ່ຽນຈຳນວນນາທີຢ
     };
     window.Swal = S;
   }
-  if(!window.QRCode){ window.__libsMissing.push('QRCode'); window.QRCode = { toCanvas:function(){ return Promise.resolve(); } }; }
+  if(!window.QRCode){ window.QRCode = { toCanvas:function(){ return Promise.resolve(); } }; }   /* ໂຕແທນຊົ່ວຄາວ — ໂຕຈິງຈະມາທັບເອງເມື່ອໂຫຼດສຳເລັດ */
   if(!(window.firebase && firebase.auth && firebase.firestore)){
     window.__libsMissing.push('Firebase'); window.__fbOffline = true;
     var rej=function(){ return Promise.reject({code:'backend/not-connected',message:'ຍັງບໍ່ໄດ້ເຊື່ອມຖານຂໍ້ມູນ'}); };
@@ -322,6 +393,7 @@ function pxrSync(){
   var orders = []; try{ orders = loadDB(DB_KEYS.orders, []).filter(function(o){ return o.userId===u.id && o.status==='completed'; }); }catch(e){}
   var spent = orders.reduce(function(n,o){ return n + (Number(o.amount)||0); },0);
   var esc = function(x){ return String(x).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  if(window._pxrRollUntil && Date.now() < window._pxrRollUntil) return;
   box.innerHTML = '<div class="pxr-uh"><div class="pxr-uav">'+esc((String(u.username||'?')[0]||'?').toUpperCase())+'</div><div style="min-width:0"><div class="pxr-uname">'+esc(u.username||'')+'</div><span class="pxr-ubadge">ຜູ້ໃຊ້</span></div><button type="button" class="pxr-uarrow" onclick="pxrAct(\'profile\')"><i class="fa-solid fa-chevron-right"></i></button></div>'
    + '<div class="pxr-ubal"><span class="l"><i></i>ຍອດເງິນ</span><span class="v">'+fmtK(u.balance||0)+' ₭</span></div>'
    + '<div class="pxr-ustats"><div class="pxr-ustat"><b>'+fmtK(orders.length)+'</b><span>ຄຳສັ່ງຊື້</span></div><div class="pxr-ustat"><b>'+fmtK(spent)+'</b><span>ໃຊ້ຈ່າຍແລ້ວ ₭</span></div></div>'
@@ -348,6 +420,7 @@ function pxrToggleUser(e){
   var v=document.querySelector('.view.active');
   if(!v || v.id!=='view-home'){ go('home'); }
   try{ pxrSync(); }catch(_){}
+  try{ pxrRollCard(); }catch(_){}
   var g=document.getElementById('pxrStage'); if(g) g.classList.add('open');
   if(w) w.classList.add('open'); if(n) n.classList.add('open');
   setTimeout(function(){ window.scrollTo({top:0,behavior:'smooth'}); },60);
@@ -384,8 +457,7 @@ body.pf-on{background:#000 !important;background-image:none !important}
 body.pf-on #topStack, body.pf-on footer, body.pf-on #pxrSideNav, body.pf-on #dashBackBtn{display:none !important}
 body.pf-on #view-dashboard > div{padding:0 !important;max-width:none !important}
 body.pf-on #view-dashboard .grid{display:block !important}
-#pfSpheres{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:none}
-body.pf-on #pfSpheres{display:block}
+#pfSpheres{display:none !important}
 #pfSpheres span{position:absolute;border-radius:50%;background:radial-gradient(circle at 32% 28%,#c9ccdc 0%,#6e7390 24%,#252840 58%,#07080f 100%);box-shadow:0 0 26px rgba(70,90,255,.28),inset -6px -8px 14px rgba(0,0,0,.6);opacity:.85;animation:pfFloat 14s ease-in-out infinite}
 @keyframes pfFloat{0%,100%{transform:translate(0,0)}33%{transform:translate(14px,-26px)}66%{transform:translate(-12px,18px)}}
 .pf-wrap{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:0 14px 44px;color:#fff;font-family:'Noto Sans Lao','Inter',sans-serif}
@@ -472,7 +544,6 @@ body.tp-on{background:#000 !important;background-image:none !important}
 body.tp-on #topStack, body.tp-on footer, body.tp-on #pxrSideNav, body.tp-on #dashBackBtn{display:none !important}
 body.tp-on #view-dashboard > div{padding:0 !important;max-width:none !important}
 body.tp-on #view-dashboard .grid{display:block !important}
-body.tp-on #pfSpheres{display:block}
 #tpPill{display:none}
 body.tp-on #tpPill{display:flex;position:fixed;z-index:90;top:calc(env(safe-area-inset-top,0px) + 14px);right:max(14px,calc(50vw - 246px))}
 .tp-wrap{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 14px 56px;color:#fff;font-family:'Noto Sans Lao','Inter',sans-serif}
@@ -2274,6 +2345,25 @@ function startLiveSync(){
     });
   }).catch(()=>{});
 }
+// ດຶງສິນຄ້າ/ຕັ້ງຄ່າ/ຕົວແທນ ທັນທີ ພ້ອມກັບການລັອກອິນແບບບໍ່ເປີດເຜີຍຕົວ (ບໍ່ລໍລັອກອິນສຳເລັດກ່ອນ) — ເວັບຈະເຕັມໄວຂຶ້ນສຳລັບຄົນທີ່ເຂົ້າຄັ້ງທຳອິດ
+function _applyRemoteDoc(key, snap){
+  try{
+    if(snap.metadata && snap.metadata.hasPendingWrites) return;
+    if(_pendingSyncs.size) return;
+    const remote = snap.exists && snap.data() && snap.data().data;
+    if(remote===undefined || remote===null) return;
+    const str = JSON.stringify(remote);
+    let _chg = false;
+    try{ if(localStorage.getItem(DB_KEYS[key]) !== str){ localStorage.setItem(DB_KEYS[key], str); _chg = true; } }catch(e){}
+    if(_chg){ _liveRerender(); if(key==='settings'){ try{ window._repaintPaymentQr && window._repaintPaymentQr(); }catch(e){} } }
+  }catch(e){}
+}
+function _fastPull(){
+  if(!BACKEND_ENABLED || window._fastPulled) return; window._fastPulled = true;
+  ['products','settings','agents'].forEach(function(key){
+    try{ fbDb.collection(CLOUD_COLLECTION).doc(key).get().then(function(snap){ _applyRemoteDoc(key, snap); }).catch(function(){}); }catch(e){}
+  });
+}
 // ແຖບອື່ນຂອງ browser ດຽວກັນ (ເຊັ່ນ ແອດມິນເປີດຢູ່ອີກແຖບ)
 window.addEventListener('storage', e=>{ if(['vp_products','vp_settings','vp_agents'].includes(e.key)) _liveRerender(); });
 
@@ -2290,8 +2380,9 @@ setTimeout(_hideLoadOverlay, 1200);   // failsafe
   const _try = f=>{ try{ f(); }catch(e){ console.warn(e); try{ (window.__bootErrors||[]).push(String((e&&e.message)||e).slice(0,120)); }catch(_){} } };
   // ເປີດໄວ: ຜູ້ເຂົ້າຊົມທີ່ມີແຄຊຢູ່ແລ້ວ ເຫັນເວັບທັນທີ ແລ້ວ sync ຖານຂໍ້ມູນ ໃນພື້ນຫຼັງ; ຄົນໃໝ່ລໍຖ້າຂໍ້ມູນສູງສຸດ ~3.5 ວິນາທີ
   const _hadCache = (loadDB(DB_KEYS.products, []) || []).length > 0;
+  _try(()=>_fastPull());   // ເລີ່ມດຶງຂໍ້ມູນທັນທີ ບໍ່ລໍຂັ້ນຕອນອື່ນ
   const _bgSync = (async()=>{
-    await _withTimeout(waitForAuthReady(700), 900);
+    await _withTimeout(waitForAuthReady(350), 500);
     await _withTimeout(_ensureAuth(), 4000);
     startLiveSync();   // ສິນຄ້າ/ການຕັ້ງຄ່າ/ຕົວແທນ ມາທັນທີແບບ push (ບໍ່ລໍຖ້າດຶງ 7 ເອກະສານ)
     await _withTimeout(pullAdminDataFromFirestore(true, ['admins','orders','logs','topups']), 8000);   // ສ່ວນທີ່ເຫຼືອ ດຶງຂະໜານໃນພື້ນຫຼັງ
@@ -2826,11 +2917,11 @@ function _paintHeroStats(userCount){
   document.getElementById('heroLiveCount').textContent = products.filter(p=>p.status==='available').length;
   const cU = document.getElementById('cardStatUsers');
   if(cU){
-    if(userCount !== null) cU.textContent = userCount;
-    document.getElementById('cardStatProducts').textContent = products.filter(p=>p.status==='available').length;
-    document.getElementById('cardStatCompleted').textContent = fmtK(completed);
+    if(userCount !== null) pxrRollNum(cU, userCount, String);
+    pxrRollNum(document.getElementById('cardStatProducts'), products.filter(p=>p.status==='available').length, String);
+    pxrRollNum(document.getElementById('cardStatCompleted'), completed, fmtK);
     const _stk = products.filter(p=>p.status==='available' && !p.maintenance).reduce((n,p)=> n + ((p.stock===undefined||p.stock===null||p.stock==='') ? 1 : (parseInt(p.stock)||0)), 0);
-    const cS = document.getElementById('cardStatStock'); if(cS) cS.textContent = fmtK(_stk);
+    const cS = document.getElementById('cardStatStock'); if(cS) pxrRollNum(cS, _stk, fmtK);
   }
   try{ renderLatestOrders(); }catch(e){}
   renderRecentPurchases();
@@ -4826,14 +4917,6 @@ window.SlipCheck = (function(){
   }
   var NAME_RE; try{ NAME_RE=new RegExp('^[\\p{L}\\p{N}\\p{M} ._\\-·]{2,24}$','u'); }catch(e){ NAME_RE=/^[^<>]{2,24}$/; }
 
-  /* floating dark spheres behind the profile page */
-  (function(){
-    var box=document.createElement('div'); box.id='pfSpheres';
-    var spec=[[70,6,12],[46,82,8],[90,70,64],[34,12,70],[58,88,40],[28,40,88],[50,-4,48],[38,60,22],[64,30,6]];
-    spec.forEach(function(s,i){ var e=document.createElement('span'); e.style.cssText='width:'+s[0]+'px;height:'+s[0]+'px;left:'+s[1]+'%;top:'+s[2]+'%;animation-delay:'+(-i*1.7)+'s;animation-duration:'+(11+i*1.3)+'s'; box.appendChild(e); });
-    document.body.appendChild(box);
-  })();
-
   window.pfRender=function(full){
     var u=(typeof currentUser==='function')?currentUser():null; if(!u) return;
     var nm=String(u.username||'?'), ini=(nm.charAt(0)||'?').toUpperCase();
@@ -5863,7 +5946,7 @@ html,body{-webkit-tap-highlight-color:transparent}
           if(isAdmin()) return;
           var c = d.exists && d.data() && d.data().users;
           var el = document.getElementById('cardStatUsers');
-          if(c != null && el && el.textContent !== String(c)) el.textContent = c;
+          if(c != null && el) pxrRollNum(el, c, String);
         }, function(){ listened.__stats = false; });
       }
     }).catch(function(){});
@@ -5927,7 +6010,7 @@ html, body{ touch-action:manipulation; }
 <!-- ===== FIX: ພື້ນຫຼັງທີ່ແອັດມິນຕັ້ງ ໃຫ້ລູກຄ້າເຫັນ (ບໍ່ຖືກ CSS !important ບັງ) ===== -->
 <style id="siteBgFixCss">
 html{ background:#03040a; }
-body.has-site-bg:not(.pf-on):not(.tp-on){ background:transparent !important; background-image:none !important; }
+body.has-site-bg, body.has-site-bg.pf-on, body.has-site-bg.tp-on{ background:transparent !important; background-image:none !important; }
 body.has-site-bg #app, body.has-site-bg main{ background:transparent !important; }
 body.has-site-bg #heroSection:not(.has-hero-banner){ background:transparent !important; background-image:none !important; }
 #siteBgLayer{ position:fixed; top:0; right:0; left:0; height:100vh; height:100lvh; transform:translate3d(0,0,0); backface-visibility:hidden; will-change:transform; contain:strict; z-index:-1; pointer-events:none; display:none; background-size:cover; background-position:center; background-repeat:no-repeat; }
@@ -6012,7 +6095,7 @@ html, body{ overflow-x:clip; overscroll-behavior-x:none; max-width:100%; }
   function paintUsers(c){
     if(c == null) return;
     var el = document.getElementById('cardStatUsers');
-    if(el && el.textContent !== String(c)) el.textContent = c;
+    if(el) pxrRollNum(el, Number(c), String);
   }
   /* 1) ສະແດງຈຳນວນຜູ້ໃຊ້ງານທີ່ເຄີຍເຫັນຄັ້ງກ່ອນ ທັນທີ (ບໍ່ຕ້ອງລໍເຄືອຂ່າຍ) */
   try{ var c0 = localStorage.getItem(CK); if(c0 !== null) paintUsers(c0); }catch(e){}
