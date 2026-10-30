@@ -1750,8 +1750,10 @@ function compressImageFile(file, maxDim, quality, maxBytes){
 
 
 // ---- Per-option code stock (each option can hold many codes; one code is used per purchase) ----
-function optAllPool(p){ return !!(p.options&&p.options.length&&p.options.every(o=>o.pool)); }
-function poolHasCodes(p){ return !!(p && p.options && p.options.some(o=>o.pool && (o.codes||[]).length>0)); }
+// ສະຕັອກຕໍ່ຕົວເລືອກ: ມີລະຫັດ(pool) → ນັບຈາກລະຫັດ; ບໍ່ມີ → ໃຊ້ຕົວເລກ o.qty; ເວັ້ນວ່າງ = ບໍ່ຈຳກັດ (null)
+function optLeft(o){ if(!o) return null; if(o.pool) return (o.codes||[]).length; if(o.qty!==undefined && o.qty!==null && o.qty!=='') return Math.max(0, parseInt(o.qty)||0); return null; }
+function optAllPool(p){ return !!(p.options&&p.options.length&&p.options.every(o=>optLeft(o)!==null)); }
+function poolHasCodes(p){ return !!(p && p.options && p.options.some(o=>optLeft(o)!==null && optLeft(o)>0)); }
 // legacy shared-stock decrement — used only for items WITHOUT a per-option code pool.
 // Never marks the product "sold" while any option still has codes left.
 function legacyTakeOne(pp){
@@ -1760,7 +1762,7 @@ function legacyTakeOne(pp){
     if(pp.stock<=0 && !poolHasCodes(pp)) pp.status='sold';
   } else if(!poolHasCodes(pp)){ pp.status='sold'; }
 }
-function syncProductStock(p){ if(!optAllPool(p)){ if(p.status==='sold' && poolHasCodes(p)) p.status='available'; return; } const t=p.options.reduce((n,o)=>n+((o.codes||[]).length),0); p.stock=t; if(t<=0 && p.status==='available') p.status='sold'; }
+function syncProductStock(p){ if(!optAllPool(p)){ if(p.status==='sold' && poolHasCodes(p)) p.status='available'; return; } const t=p.options.reduce((n,o)=>n+optLeft(o),0); p.stock=t; if(t<=0 && p.status==='available') p.status='sold'; }
 function _findPoolOpt(p, optId, optLabel){ return (p.options||[]).find(x=>x.id===optId) || (p.options||[]).find(x=>x.label===optLabel); }
 // Takes ONE code out of the option's pool atomically on the server, so two customers can never get the same code.
 async function claimOptionCode(productId, optId, optLabel){
@@ -1782,6 +1784,45 @@ async function claimOptionCode(productId, optId, optLabel){
   });
   if(claimed !== null && latest) localStorage.setItem(DB_KEYS.products, JSON.stringify(latest));
   return claimed;
+}
+// ຫັກສະຕັອກແບບຕົວເລກຂອງຕົວເລືອກ (ເຊັ່ນ 1 ມື້) ແບບ atomic ເທິງເຊີເວີ — ຖ້າບໍ່ພໍ ຈະບໍ່ຫັກ ແລະ return false
+async function takeOptionQty(productId, optId, optLabel, n){
+  await _ensureAuth();
+  const ref = fbDb.collection(CLOUD_COLLECTION).doc('products');
+  let ok = false, latest = null;
+  await fbDb.runTransaction(async tx=>{
+    ok = false;
+    const snap = await tx.get(ref);
+    const arr = (snap.exists && snap.data().data) || [];
+    const p = arr.find(x=>x.id===productId); if(!p) return;
+    const o = _findPoolOpt(p, optId, optLabel);
+    if(!o || o.pool) return;
+    const left = optLeft(o);
+    if(left===null){ ok = true; return; }
+    if(left < n) return;
+    o.qty = left - n;
+    syncProductStock(p);
+    tx.set(ref, { data: arr, updatedAt: nowISO() });
+    latest = arr; ok = true;
+  });
+  if(latest) localStorage.setItem(DB_KEYS.products, JSON.stringify(latest));
+  return ok;
+}
+async function releaseOptionQty(productId, optId, optLabel, n){
+  const ref = fbDb.collection(CLOUD_COLLECTION).doc('products');
+  let latest = null;
+  await fbDb.runTransaction(async tx=>{
+    const snap = await tx.get(ref);
+    const arr = (snap.exists && snap.data().data) || [];
+    const p = arr.find(x=>x.id===productId); if(!p) return;
+    const o = _findPoolOpt(p, optId, optLabel); if(!o || o.pool || optLeft(o)===null) return;
+    o.qty = optLeft(o) + n;
+    if(optAllPool(p) && p.status==='sold') p.status='available';
+    syncProductStock(p);
+    tx.set(ref, { data: arr, updatedAt: nowISO() });
+    latest = arr;
+  });
+  if(latest) localStorage.setItem(DB_KEYS.products, JSON.stringify(latest));
 }
 // Puts a code back (used if charging the wallet fails after the code was taken).
 async function releaseOptionCode(productId, optId, optLabel, code){
@@ -2862,7 +2903,7 @@ function renderRecentPurchases(){
     const maint = !!p.maintenance;
     const prices = (p.options&&p.options.length) ? Math.min(...p.options.map(o=>aOpt(p,o))) : aPrice(p);
     let stk;
-    if(p.options && p.options.length && p.options.every(o=>o.pool)) stk = p.options.reduce((n,o)=>n+((o.codes||[]).length),0);
+    if(p.options && p.options.length && p.options.every(o=>optLeft(o)!==null)) stk = p.options.reduce((n,o)=>n+optLeft(o),0);
     else if(p.stock===undefined || p.stock===null || p.stock==='') stk = '∞';
     else stk = parseInt(p.stock)||0;
     const out = (stk===0);
@@ -3024,7 +3065,7 @@ function pmMaxQty(){
   const p = _currentModalProduct; if(!p) return 1;
   let mx = 1;
   const opt = (p.options && p.options.length) ? (p.options.find(o=>o.id===_selectedPmOptionId) || p.options[0]) : null;
-  if(opt && opt.pool) mx = (opt.codes||[]).length;
+  if(opt && optLeft(opt)!==null) mx = optLeft(opt);
   else if(p.stock!==undefined && p.stock!==null && p.stock!=='') mx = parseInt(p.stock)||0;
   return Math.max(1, Math.min(mx, 50));
 }
@@ -3047,7 +3088,7 @@ function pmQtySet(v){ _pmQty = parseInt(v)||1; pmQtyRender(); }
 function selectPmOption(optId){ 
   if(!_currentModalProduct || !_currentModalProduct.options) return;
   const opt = _currentModalProduct.options.find(o=>o.id===optId);
-  if(opt && opt.pool && !(opt.codes||[]).length) return;
+  if(opt && optLeft(opt)===0) return;
   _selectedPmOptionId = optId; setTimeout(pmQtyRender,0);
   const priceEl = document.getElementById('pmPriceDisplay');
   if(priceEl && opt) priceEl.innerHTML = priceHtml(aOptBase(_currentModalProduct,opt), aOpt(_currentModalProduct,opt), false);
@@ -3065,7 +3106,7 @@ async function openProductModalById(id){
   const catName = (getCategories().find(c=>c.id===p.category)||{}).name || p.category;
   const stockHtml = stockBadgeHtml(p);
   const hasOptions = p.options && p.options.length;
-  const _firstOpt = hasOptions ? (p.options.find(o=>!(o.pool && !(o.codes||[]).length)) || p.options[0]) : null;
+  const _firstOpt = hasOptions ? (p.options.find(o=>optLeft(o)!==0) || p.options[0]) : null;
   const initialPrice = hasOptions ? aOpt(p,_firstOpt) : aPrice(p);
   const initialBase = hasOptions ? aOptBase(p,_firstOpt) : aPriceBase(p);
   _selectedPmOptionId = hasOptions ? _firstOpt.id : null;
@@ -3090,7 +3131,7 @@ async function openProductModalById(id){
           <label class="text-xs font-display text-mist-400 uppercase">ເລືອກມື້ / ຕົວເລືອກ</label>
           <p class="text-[11px] text-mist-400 mt-1">ຫຼັງຊື້ ທ່ານຈະໄດ້ຮັບຂໍ້ມູນຂອງຕົວເລືອກທີ່ເລືອກ</p>
           <div class="grid grid-cols-2 gap-2 mt-2">
-            ${p.options.map((o)=>{ const left = o.pool ? (o.codes||[]).length : null; const out = o.pool && left<=0; const act = o.id===_selectedPmOptionId;
+            ${p.options.map((o)=>{ const left = optLeft(o); const out = left!==null && left<=0; const act = o.id===_selectedPmOptionId;
               return `<button type="button" ${out?'disabled':''} onclick="selectPmOption('${o.id}')" data-opt-id="${o.id}" class="pm-option-btn px-3 py-2.5 rounded-lg bg-ink-900 border ${act?'border-plasma-500 bg-plasma-500/10':'border-ink-600'} ${out?'opacity-40':''} text-mist-200 text-sm font-display hover:border-plasma-500 text-left">
               <div class="font-600">${escapeHtml(o.label)}</div>
               <div class="text-ion-400 font-mono text-xs mt-0.5">${aOpt(p,o)<aOptBase(p,o)?`<s class="text-mist-400 mr-1">₭${fmtK(aOptBase(p,o))}</s>`:''}₭${fmtK(aOpt(p,o))}</div>
@@ -3492,7 +3533,7 @@ function copyMyCode(orderId){
   }
 }
 function renderDashNotifs(){
-  const user = currentUser(); if(!user) return;
+  const user = currentUser(); if(!user) return; if(!Array.isArray(user.notifications)) user.notifications=[]; 
   const notifs = [...user.notifications].sort((a,b)=>new Date(b.at)-new Date(a.at));
   document.getElementById('dashNotifList').innerHTML = notifs.map(n=>`
     <div class="bg-ink-800/60 border border-ink-700 rounded-xl p-4 ${n.read?'opacity-60':''}">
@@ -3502,7 +3543,7 @@ function renderDashNotifs(){
   markAllNotifsRead();
 }
 function refreshNotifBell(){
-  const user = currentUser(); if(!user) return;
+  const user = currentUser(); if(!user) return; if(!Array.isArray(user.notifications)) user.notifications=[]; 
   const unread = user.notifications.filter(n=>!n.read).length;
   const dot = document.getElementById('notifDot');
   if(unread>0){ dot.classList.remove('hidden'); dot.textContent = unread; } else dot.classList.add('hidden');
@@ -3511,7 +3552,7 @@ function refreshNotifBell(){
 }
 function toggleNotifPanel(){ document.getElementById('notifPanel').classList.toggle('hidden'); }
 function markAllNotifsRead(){
-  const user = currentUser(); if(!user) return;
+  const user = currentUser(); if(!user) return; if(!Array.isArray(user.notifications)) user.notifications=[]; 
   user.notifications.forEach(n=>n.read=true);
   const users = loadDB(DB_KEYS.users,[]); const idx = users.findIndex(u=>u.id===user.id); users[idx]=user; saveDB(DB_KEYS.users, users);
   refreshNotifBell();
@@ -3932,10 +3973,19 @@ async function buyNow(productId){
     }
     claimedCode = claimedCodes[0];
   }
+  // ຕົວເລືອກທີ່ຕັ້ງສະຕັອກເປັນຕົວເລກ (ບໍ່ມີລະຫັດ): ຫັກສະຕັອກກ່ອນຕັດເງິນ — 0 = ຊື້ບໍ່ໄດ້
+  const _qtyOpt = (freshOpt && !freshOpt.pool && optLeft(freshOpt)!==null) ? freshOpt : null;
+  let _qtyTaken = false;
+  if(_qtyOpt){
+    try{ _qtyTaken = await takeOptionQty(productId, _qtyOpt.id, _qtyOpt.label, qty); }
+    catch(e){ console.warn(e); Swal.close(); toastErr('ເກີດຂໍ້ຜິດພາດ, ກະລຸນາລອງໃໝ່'); return; }
+    if(!_qtyTaken){ Swal.close(); toastErr('ຕົວເລືອກນີ້ສະຕັອກບໍ່ພໍ / ໝົດແລ້ວ'); try{ await pullAdminDataFromFirestore(true); }catch(e){} renderHomeGrids(); renderProductList(); try{ pxrRefreshPDP(productId); }catch(e){} return; }
+  }
   // ຫັກເງິນ — atomic on the server (Firestore transaction), not from the local cache
   try{
     await adjustUserBalance(user.id, -(freshPrice*qty), {strict:true});
   }catch(e){
+    if(_qtyTaken){ try{ await releaseOptionQty(productId, _qtyOpt.id, _qtyOpt.label, qty); }catch(e2){ console.warn(e2); } }
     if(claimedCodes.length){ await _releaseAll(); }
     Swal.close();
     if(e && e.message==='INSUFFICIENT_BALANCE'){ await refreshOwnUserFromFirestore(); toastErr('ຍອດເງິນບໍ່ພໍ'); }
@@ -3965,7 +4015,7 @@ async function buyNow(productId){
   // take one item out of stock (same rule the admin approval used to apply)
   const allProducts = loadDB(DB_KEYS.products,[]);
   const pp = allProducts.find(x=>x.id===productId);
-  if(pp && claimedCode === null){      // a code taken from an option's own pool already updated stock on the server
+  if(pp && claimedCode === null && !_qtyTaken){      // a code taken from an option's own pool already updated stock on the server
     for(let i=0;i<qty;i++) legacyTakeOne(pp);
     saveDB(DB_KEYS.products, allProducts);
   }
@@ -4794,9 +4844,9 @@ window.SlipCheck = (function(){
 #pxrWave{position:fixed;inset:0;z-index:100000;pointer-events:none;visibility:hidden;overflow:hidden;-webkit-tap-highlight-color:transparent}
 #pxrWave.on{visibility:visible;pointer-events:auto}
 #pxrWave svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
-@keyframes pxrPop{0%{transform:scale(1)}26%{transform:scale(.8)}58%{transform:scale(1.14)}78%{transform:scale(.965)}100%{transform:scale(1)}}
-@keyframes pxrRing{0%{box-shadow:0 0 0 0 rgba(96,124,255,.8)}100%{box-shadow:0 0 0 22px rgba(96,124,255,0)}}
-.pxr-pop{animation:pxrPop .52s cubic-bezier(.2,.9,.3,1.3),pxrRing .52s ease-out !important}
+/* gentle press: no overshoot, no ring, no vibration -> nothing shakes */
+@keyframes pxrPop{0%{transform:scale(1)}40%{transform:scale(.965)}100%{transform:scale(1)}}
+.pxr-pop{animation:pxrPop .28s cubic-bezier(.3,.7,.3,1) !important}
 @media (prefers-reduced-motion:reduce){#pxrWave{display:none!important}.pxr-pop{animation:none!important}}
 </style>
 <script id="pxrWaveJs">
@@ -4897,7 +4947,6 @@ window.SlipCheck = (function(){
     var t=ev.target; if(!t||!t.closest) return;
     var b=popTarget(t); if(!b) return;
     b.classList.remove('pxr-pop'); void b.offsetWidth; b.classList.add('pxr-pop');
-    try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){}
   },{passive:true});
   document.addEventListener('animationend',function(ev){
     var t=ev.target; if(t&&t.classList&&t.classList.contains('pxr-pop')&&ev.animationName==='pxrPop') t.classList.remove('pxr-pop');
@@ -5210,7 +5259,7 @@ window.SlipCheck = (function(){
      ພາຍໃນ: ອ່ານສະລິບ (OCR) → ກວດ 1) ຈຳນວນເງິນ 2) ວັນທີ/ເວລາ (ສະລິບເກົ່າບໍ່ຮັບ) 3) ເລກອ້າງອີງ/ເລກໃບບິນ
      4) ຊື່ຜູ້ຮັບຕາມທີ່ແອັດມິນຕັ້ງ (ອ່ານຊື່ຜູ້ໂອນເກັບໄວ້ໃຫ້ແອັດມິນເບິ່ງ).
      ຖືກທຸກຢ່າງ → ອະນຸມັດຫຼັງ ~10 ວິ. ຜິດ / ບໍ່ຊັດ / ຊ້ຳ → ປະໄວ້ໃຫ້ແອັດມິນກວດເອງ (ບໍ່ປະຕິເສດໃຫ້ລູກຄ້າເຫັນ). */
-  var AUTO_MIN_MS = 10000;
+  var AUTO_MIN_MS = 200;
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
   function a2(s){ return String(s||'').replace(/[໐-໙]/g,function(c){ return '໐໑໒໓໔໕໖໗໘໙'.indexOf(c); }); }
   function p2(n){ return (n<10?'0':'')+n; }
@@ -5367,7 +5416,7 @@ window.SlipCheck = (function(){
       if(typeof text!=='string') text=await tools.readSlip(ctx.img);
     }catch(e){ console.warn('OCR failed', e); failed=true; text=''; }
     var res = failed ? { ok:false, reasons:['ລະບົບອ່ານສະລິບບໍ່ສຳເລັດ'], info:{}, checks:{} } : judge(text, ctx);
-    if(res.ok){ var left=AUTO_MIN_MS-(Date.now()-ctx.submitAt); if(left>0) await sleep(left); }   // ລໍ ~10 ວິ ກ່ອນອະນຸມັດ
+    if(res.ok){ var left=AUTO_MIN_MS-(Date.now()-ctx.submitAt); if(left>0) await sleep(left); }   // ລໍ ~0.2 ວິ ກ່ອນອະນຸມັດ
     var claimed=null, finalReasons=res.reasons.slice();
     var done = await txTopups(function(arr){
       claimed=null; finalReasons=res.reasons.slice();
@@ -5582,7 +5631,7 @@ html,body{-webkit-tap-highlight-color:transparent}
 #pxrWave.on{display:block;pointer-events:auto}
 #pxrWave .w{position:absolute;left:80px;right:80px;top:0;bottom:0;background:linear-gradient(90deg,#d9dcff 0%,#8f9bff 25%,#4c5cff 55%,#3b49f0 100%);overflow:hidden}
 #pxrWave svg{position:absolute;top:0;height:100%;width:91px}
-#pxrWave svg.r{right:0}#pxrWave svg.l{left:0;transform:scaleX(-1)}
+#pxrWave svg.r{right:0;left:auto}#pxrWave svg.l{left:0;transform:scaleX(-1)}
 #pxrWave i{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.9),rgba(255,255,255,.15) 60%,transparent 70%)}
 /* ===== ກາດສິນຄ້າ (ແບບຄລິບ) ===== */
 .pc2{display:flex;flex-direction:column;border-radius:24px;overflow:hidden;background:linear-gradient(180deg,#0d0d13,#060609);border:1px solid rgba(255,255,255,.08);cursor:pointer;touch-action:manipulation;transition:opacity .12s}
@@ -5653,19 +5702,20 @@ html,body{-webkit-tap-highlight-color:transparent}
   }
   function pxrWave(fn){
     var reduce = false; try{ reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
-    if(busy || reduce || !Element.prototype.animate){ try{ fn(); }catch(e){ console.error(e); } return; }
+    if(busy || reduce || !Element.prototype.animate){ try{ fn(); }catch(e){ console.error(e); } return true; }
     busy = true;
     var el = mkWave(); el.classList.add('on');
     setTimeout(function(){ if(busy){ try{ el.getAnimations().forEach(function(x){ x.cancel(); }); }catch(e){} el.classList.remove('on'); busy = false; } }, 1800);   // ກັນຄ້າງ: ປົດລັອກຫຼັງ 1.8 ວິ
     var ease = 'cubic-bezier(.65,0,.35,1)';
-    el.animate([{transform:'translate3d(-110%,0,0)'},{transform:'translate3d(0,0,0)'}], {duration:300, easing:ease, fill:'forwards'}).finished.then(function(){
+    el.animate([{transform:'translate3d(-110%,0,0)'},{transform:'translate3d(0,0,0)'}], {duration:200, easing:ease, fill:'forwards'}).finished.then(function(){
       var root = document.documentElement, old = root.style.scrollBehavior; root.style.scrollBehavior = 'auto';
       try{ window.scrollTo(0,0); fn(); }catch(e){ console.error(e); }
       root.style.scrollBehavior = old;
       setTimeout(function(){
-        el.animate([{transform:'translate3d(0,0,0)'},{transform:'translate3d(110%,0,0)'}], {duration:360, easing:ease, fill:'forwards'}).finished.then(function(){ el.classList.remove('on'); busy = false; });
-      }, 70);
+        el.animate([{transform:'translate3d(0,0,0)'},{transform:'translate3d(110%,0,0)'}], {duration:250, easing:ease, fill:'forwards'}).finished.then(function(){ el.classList.remove('on'); busy = false; });
+      }, 50);
     }).catch(function(){ busy = false; el.classList.remove('on'); });
+    return true;
   }
   window.pxrWave = pxrWave;
   var _go0 = window.go;
@@ -5684,7 +5734,7 @@ html,body{-webkit-tap-highlight-color:transparent}
   var _cc = {t:0, v:{}};
   function soldCounts(){ var n = Date.now(); if(n - _cc.t > 800){ try{ _cc.v = completedOrderCounts(); }catch(e){ _cc.v = {}; } _cc.t = n; } return _cc.v; }
   function stockOf(p){
-    if(p.options && p.options.length && p.options.every(function(o){ return o.pool; })) return p.options.reduce(function(n,o){ return n + ((o.codes||[]).length); }, 0);
+    if(p.options && p.options.length && p.options.every(function(o){ return optLeft(o)!==null; })) return p.options.reduce(function(n,o){ return n + optLeft(o); }, 0);
     if(p.stock === undefined || p.stock === null || p.stock === '') return null;
     return parseInt(p.stock) || 0;
   }
@@ -5708,20 +5758,20 @@ html,body{-webkit-tap-highlight-color:transparent}
   /* ---------- ໜ້າລາຍລະອຽດສິນຄ້າ ແບບຄລິບທີ 2 (ບໍ່ມີຫົວໃຈ) ---------- */
   function renderPDP(p){
     var cat = (getCategories().find(function(c){ return c.id === p.category; }) || {}).name || p.category || '';
-    var hasOpt = p.options && p.options.length, maint = !!p.maintenance, unavailable = p.status !== 'available' || maint;
-    var first = hasOpt ? (p.options.find(function(o){ return !(o.pool && !(o.codes||[]).length); }) || p.options[0]) : null;
+    var hasOpt = p.options && p.options.length, maint = !!p.maintenance, unavailable = p.status !== 'available' || maint || (hasOpt && p.options.every(function(o){ return optLeft(o)===0; }));
+    var first = hasOpt ? (p.options.find(function(o){ return optLeft(o)!==0; }) || p.options[0]) : null;
     var price = hasOpt ? aOpt(p, first) : aPrice(p), base = hasOpt ? aOptBase(p, first) : aPriceBase(p);
     _currentModalProduct = p; _selectedPmOptionId = hasOpt ? first.id : null; _pmQty = 1; window._pdpSig = pdpSig(p);
     var stk = stockOf(p), imgs = (p.images || []).filter(Boolean);
     var opts = hasOpt ? p.options.map(function(o){
-      var left = o.pool ? (o.codes||[]).length : null, o_out = o.pool && left <= 0, act = o.id === _selectedPmOptionId;
+      var left = optLeft(o), o_out = left !== null && left <= 0, act = o.id === _selectedPmOptionId;
       return '<button type="button" '+(o_out?'disabled':'')+' onclick="selectPmOption(\''+o.id+'\')" data-opt-id="'+o.id+'" class="pm-option-btn '+(act?'border-plasma-500 bg-plasma-500/10':'border-ink-600')+(o_out?' out':'')+'">'
         + '<span class="dot"></span><span class="nm">'+escapeHtml(o.label)+(left!==null ? '<small>'+(o_out?'ໝົດສະຕັອກ':'ເຫຼືອ '+left)+'</small>' : '')+'</span><span class="pr">₭ '+fmtDot(aOpt(p,o))+'</span></button>';
     }).join('') : '';
     var qty = unavailable ? '' : '<div class="pdp-pl">ຈຳນວນ</div><div class="pdp-qty"><button type="button" id="pmQtyMinus" onclick="pmQtyChange(-1)" disabled>−</button>'
       + '<input id="pmQtyInput" type="number" inputmode="numeric" min="1" value="1" onchange="pmQtySet(this.value)"><button type="button" id="pmQtyPlus" onclick="pmQtyChange(1)">+</button><span id="pmQtyMax" style="font-size:11px;color:#8a8fa6;margin-left:6px"></span></div>';
     var bar = '<div class="pdp-bar"><div><small>ລວມທັງໝົດ</small><b id="pmQtyTotal">₭'+fmtK(price)+'</b></div>'
-      + '<button class="pdp-buy" onclick="buyNow(\''+p.id+'\')" '+(unavailable?'disabled':'')+'>'+(maint ? '<i class="fa-solid fa-arrow-up" style="margin-right:8px"></i>ກຳລັງປັບປຸງ' : (p.status !== 'available' ? 'ຂາຍແລ້ວ' : '<i class="fa-solid fa-cart-shopping" style="margin-right:8px"></i>ຊື້ເລີຍ'))+'</button></div>';
+      + '<button class="pdp-buy" onclick="buyNow(\''+p.id+'\')" '+(unavailable?'disabled':'')+'>'+(maint ? '<i class="fa-solid fa-arrow-up" style="margin-right:8px"></i>ກຳລັງປັບປຸງ' : (unavailable ? 'ໝົດສະຕັອກ' : '<i class="fa-solid fa-cart-shopping" style="margin-right:8px"></i>ຊື້ເລີຍ'))+'</button></div>';
     document.getElementById('productModalBody').innerHTML =
       '<div class="pdp"><div class="pdp-top"><button class="pdp-back" onclick="closeProductModal()"><i class="fa-solid fa-chevron-left"></i></button>'
       + '<div class="pdp-crumb">ໜ້າຫຼັກ / '+escapeHtml(cat)+' / <b>'+escapeHtml(p.name)+'</b></div></div>'
@@ -5738,6 +5788,26 @@ html,body{-webkit-tap-highlight-color:transparent}
     m.classList.add('pdp-on'); m.classList.remove('hidden'); m.scrollTop = 0;
     document.body.style.overflow = 'hidden';
     try{ pmQtyRender(); }catch(e){}
+    try{ pdpHydrateHi(p); }catch(e){}
+  }
+  /* ຮູບຄວາມຄົມສູງ: ເກັບແຍກໃນເອກະສານ shopData/pimg_<id> (ບໍ່ຢູ່ໃນເອກະສານສິນຄ້າ ຈຶ່ງບໍ່ຕິດຂີດຈຳກັດ 1MB) — ໂຫຼດຕອນເປີດໜ້າສິນຄ້າ */
+  var _hiCache = {};
+  async function pdpHydrateHi(p){
+    var ids = p.hiImages || []; if(!ids.some(Boolean)) return;
+    try{ await _ensureAuth(); }catch(e){}
+    for(var i=0;i<ids.length;i++){
+      if(!ids[i]) continue;
+      var src = _hiCache[ids[i]];
+      if(!src){
+        try{ var snap = await fbDb.collection(CLOUD_COLLECTION).doc('pimg_'+ids[i]).get(); if(!snap.exists) continue; src = snap.data().data; }catch(e){ continue; }
+        if(!src) continue; _hiCache[ids[i]] = src;
+      }
+      if(!_currentModalProduct || _currentModalProduct.id !== p.id) return;
+      var main = document.getElementById('pmMainImg'), th = document.querySelectorAll('.pdp-thumbs img');
+      if(i === 0 && main && main.getAttribute('src') === (p.images||[])[0]) main.setAttribute('src', src);
+      if(th[i]) th[i].setAttribute('src', src);
+      else if(i === 0 && !th.length) { /* ມີຮູບດຽວ — ບໍ່ມີ thumbnail */ }
+    }
   }
   // ສະແດງລວມທັງໝົດແບບຈຸດ (₭ 25.000) ຄືໃນຄລິບ
   var _pq0 = window.pmQtyRender;
@@ -5762,7 +5832,7 @@ html,body{-webkit-tap-highlight-color:transparent}
     var keepScroll = m.scrollTop, keepOpt = _selectedPmOptionId, keepQty = _pmQty;
     var mi = document.getElementById('pmMainImg'), keepImg = mi ? mi.getAttribute('src') : null;
     renderPDP(p);
-    try{ if(keepOpt && p.options && p.options.some(function(o){ return o.id === keepOpt && !(o.pool && !(o.codes||[]).length); })) selectPmOption(keepOpt); }catch(e){}
+    try{ if(keepOpt && p.options && p.options.some(function(o){ return o.id === keepOpt && optLeft(o)!==0; })) selectPmOption(keepOpt); }catch(e){}
     try{ _pmQty = Math.max(1, keepQty || 1); pmQtyRender(); }catch(e){}
     try{ var ni = document.getElementById('pmMainImg'); if(ni && keepImg && (p.images||[]).indexOf(keepImg) > -1) ni.setAttribute('src', keepImg); }catch(e){}
     m.scrollTop = keepScroll;
@@ -5837,8 +5907,8 @@ html,body{-webkit-tap-highlight-color:transparent}
   var S = {};
   function ld(k,d){ try{ return loadDB(k,d); }catch(e){ return d; } }
   function stockOf(p){
-    if(p.options && p.options.length && p.options.every(function(o){ return o.pool; }))
-      return p.options.reduce(function(n,o){ return n + ((o.codes||[]).length); },0);
+    if(p.options && p.options.length && p.options.every(function(o){ return optLeft(o)!==null; }))
+      return p.options.reduce(function(n,o){ return n + optLeft(o); },0);
     if(p.stock===undefined || p.stock===null || p.stock==='') return Infinity;
     return parseInt(p.stock)||0;
   }
